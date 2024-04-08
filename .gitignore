@@ -7,6 +7,9 @@ ENV/
 env.bak/
 venv.bak/
 
+#Gmail Credentials
+credentials.json
+
 ### Linux ###
 *~
 
@@ -16,6 +19,7 @@ __pycache__/
 __pypackages__/
 *.py[cod]
 *$py.class
+**.pyc
 
 # Distribution / packaging
 .Python
@@ -50,6 +54,8 @@ pip-delete-this-directory.txt
 # Unit test / coverage reports
 htmlcov/
 .tox/
+src/tox_ini_fmt/version.py
+
 .nox/
 .coverage
 .coverage.*
@@ -87,6 +93,7 @@ pip-selfcheck.json
 /.vs/
 /.vscode/
 /.idea/
+.idea/
 
 # Local History for Visual Studio Code
 .history/
