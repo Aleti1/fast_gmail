@@ -1,6 +1,6 @@
 from typing import Optional
 from typing import List
-from typing import Self
+from typing_extensions import Self
 from typing import Union
 
 from dataclasses import field
@@ -12,6 +12,7 @@ from datetime import timezone
 from helpers import GoogleService
 from helpers import Labels
 from helpers import GmailLabel
+from helpers import LabelAction
 from helpers import DATE_FORMAT
 
 from googleapiclient.errors import HttpError
@@ -124,6 +125,16 @@ class MessagePart(object):
 			if attachment.filename == filename:
 				return attachment
 		return None
+	
+	def get_attachment_by_part_id(self, id: str)-> Union[Attachment, None]:
+		if not id or len(id) == 0:
+			return None
+		if not self._has_attachments():
+			return None
+		for attachment in self.attachments:
+			if attachment.part_id == id:
+				return attachment
+		return None
 
 	@property
 	def attachments(self)-> Optional[List[Attachment]]:
@@ -134,17 +145,19 @@ class MessagePart(object):
 			if part.filename:
 				if part.body.attachmentId:
 					attachments.append(Attachment(
-						filename=part.filename,
+						filename=part.filename.replace("/", "_"),
 						mimeType=part.mimeType if part.mimeType else "",
 						id = part.body.attachmentId,
-						google_service=self.google_service
+						google_service=self.google_service,
+						part_id = part.partId
 					))
 				else:
 					attachments.append(Attachment(
-						filename=part.filename,
+						filename=part.filename.replace("/", "_"),
 						mimeType=part.mimeType if part.mimeType else "",
 						data = part.body.data,
-						google_service=self.google_service
+						google_service=self.google_service,
+						part_id = part.partId
 					))
 		return attachments
 
@@ -157,7 +170,7 @@ class MessagePart(object):
 			if key == header.name:
 				return header
 		return None
-	
+
 
 class Message(object):
 	id: str
@@ -171,7 +184,7 @@ class Message(object):
 	labelIds: List[Labels] = field(default_factory=lambda : [])
 	labels: Optional[List[GmailLabel]] = None
 
-	def __init__(self, google_service: GoogleService, *args, **kwargs):
+	def __init__(self, google_service: GoogleService, **kwargs):
 		self.id = kwargs.pop("id", None)
 		self.threadId = kwargs.pop("threadId", None)
 		self.snippet = kwargs.pop("snippet", None)
@@ -195,6 +208,82 @@ class Message(object):
 			return None
 		return self.payload.headers
 
+	def _content(self)-> Optional[dict]:
+		if not self.payload:
+			return None
+		result = {}
+		if not self.payload.parts:
+			if self.payload.mimeType in ["text/plain", "text/html"] and self.payload.body:
+				if self.payload.body.data:
+					if not self.payload.mimeType in result:
+						result[self.payload.mimeType] = []
+					result[self.payload.mimeType].append(
+						base64.urlsafe_b64decode(self.payload.body.data).decode("utf-8")
+					)
+					return result
+			return {
+				"multipart/alternative": base64.urlsafe_b64decode(
+					self.payload.body.data
+				).decode("utf-8")} if self.payload.body else None
+		for part in self.payload.parts:
+			if part.mimeType == "multipart/alternative":
+				for sub_part in part.parts:
+					if sub_part.mimeType not in ["text/plain", "text/html"]:
+						continue
+					if not sub_part.mimeType in result:
+						result[sub_part.mimeType] = []
+					if not sub_part.body:
+						continue
+					if not sub_part.body.data:
+						continue
+					result[sub_part.mimeType].append(
+						base64.urlsafe_b64decode(sub_part.body.data).decode("utf-8")
+					)
+			else:
+				if part.mimeType not in ["text/plain", "text/html"]:
+					continue
+				if not part.mimeType in result:
+					result[part.mimeType] = []
+				if not part.body:
+					continue
+				if not part.body.data:
+					continue
+				result[part.mimeType].append(
+					base64.urlsafe_b64decode(part.body.data).decode("utf-8")
+				)
+		return result
+	
+	@property
+	def body(self)-> str:
+		return self.html if self.html and len(self.html) > 0 else self.plain
+
+	@property
+	def html(self)-> str:
+		content = self._content()
+		if not content:
+			return ""
+		if "text/html" not in content:
+			return ""
+		return " ".join(content["text/html"])
+		
+	@property
+	def plain(self)-> str:
+		content = self._content()
+		if not content:
+			return ""
+		if "text/plain" not in content:
+			return ""
+		return " ".join(content["text/plain"])
+
+	@property
+	def alternative(self)-> str:
+		content = self._content()
+		if not content:
+			return ""
+		if "multipart/alternative" not in content:
+			return ""
+		return " ".join(content["multipart/alternative"])
+	
 	@property
 	def recipient(self)-> Union[str, None]:
 		if not self.message_headers:
@@ -230,7 +319,13 @@ class Message(object):
 			return None
 		for header in self.message_headers:
 			if header.name == "From":
-				return header.value
+				sender = header.value
+				if "\"" in sender:
+					sender = sender.split("\"")[1]
+				else:
+					if "<" in sender:
+						sender = sender.split("<")[1].replace(">", "")
+				return sender
 		return None
 	
 	@property
@@ -327,7 +422,6 @@ class Message(object):
 	def date_string(self, format: Optional[str] = DATE_FORMAT)-> Optional[str]:
 		"""returns fomated delivered date, cheatsheet: https://strftime.org/"""
 		if not self.date:
-			print(self.__dict__,"\n", self.payload.__dict__)
 			return None
 		date = self.date.astimezone() # set to locale timezone
 		if date.year == dt.now(timezone.utc).astimezone().year:
@@ -355,7 +449,7 @@ class Message(object):
 	@property
 	def mark_spam(self)-> Self:
 		self._edit_labels(
-			action="add_remove",
+			action=LabelAction.TOGGLE,
 			add=[Labels.SPAM.value],
 			remove=[
 				Labels.TRASH.value,
@@ -369,8 +463,9 @@ class Message(object):
 	@property
 	def mark_not_spam(self)-> Self:
 		self._edit_labels(
-			label_to_add=[Labels.INBOX.value],
-			labels_to_remove=[Labels.SPAM.value]
+			action=LabelAction.TOGGLE,
+			add=[Labels.INBOX.value],
+			remove=[Labels.SPAM.value]
 		)
 		return self
 
@@ -385,7 +480,7 @@ class Message(object):
 	@property
 	def move_to_trash(self)-> Self:
 		self._edit_labels(
-			action="add_remove",
+			action=LabelAction.TOGGLE,
 			add=[Labels.TRASH.value],
 			remove=[
 				Labels.INBOX.value,
@@ -398,8 +493,9 @@ class Message(object):
 	@property
 	def move_from_trash(self)-> Self:
 		self._edit_labels(
-			label_to_add=[Labels.INBOX.value],
-			labels_to_remove=[Labels.TRASH.value]
+			action=LabelAction.TOGGLE,
+			add=[Labels.INBOX.value],
+			remove=[Labels.TRASH.value]
 		)
 		return self
 
@@ -443,13 +539,17 @@ class Message(object):
 			return self.mark_not_starred
 		return self.mark_starred
 
-	def get_attachment(self, filename: str)-> Union[Attachment, None]:
-		if not filename or len(filename) == 0:
-			return None
+	def get_attachment(
+		self,
+		filename: Optional[str] = None,
+		id: Optional[str] = None
+	)-> Union[Attachment, None]:
 		if not self.has_attachments:
 			return None
-		return self.payload.get_attachment_by_filename(filename)
-
+		if filename:
+			return self.payload.get_attachment_by_filename(filename)
+		return self.payload.get_attachment_by_part_id(id)
+	
 	@property
 	def get_labels(self)-> Optional[List[GmailLabel]]:
 		"""gets all labels for this message"""
@@ -473,32 +573,42 @@ class Message(object):
 		return self.labels
 
 	def add_label(self, label: Union[Labels, str])-> bool:
-		return self._edit_labels(action="add", add=[label])
+		return self._edit_labels(action=LabelAction.ADD, add=[label])
+	
 	def add_labels(self, labels: Union[List[Labels], List[str]])-> bool:
-		return self._edit_labels(action="add", add=labels)
+		return self._edit_labels(action=LabelAction.ADD, add=labels)
+	
 	def remove_label(self, label: Union[Labels, str])-> bool:
-		return self._edit_labels(action="remove", remove=[label])
+		return self._edit_labels(action=LabelAction.REMOVE, remove=[label])
+	
 	def remove_labels(self, labels: Union[List[Labels], List[str]])-> bool:
-		return self._edit_labels(action="remove", remove=labels)
+		return self._edit_labels(action = LabelAction.REMOVE, remove=labels)
+	
 	def modify_labels(
 		self,
 		label_to_add: Optional[Union[List[Labels], List[str]]],
 		labels_to_remove: Optional[Union[List[Labels], List[str]]]
 	)-> bool:
 		return self._edit_labels(
-			action="add_remove",
-			add=label_to_add,
-			remove=labels_to_remove
+			action = LabelAction.TOGGLE,
+			add = label_to_add,
+			remove = labels_to_remove
 		)
 
-	def _edit_labels(self, action: str, add: Optional[List[Labels]]=[], remove: Optional[List[Labels]]=[])-> bool:
+	def _edit_labels(
+		self,
+		action: LabelAction,
+		add: Optional[List[Labels]]=[],
+		remove: Optional[List[Labels]]=[]
+	)-> bool:
+		
 		payload = {}
 		match action:
-			case "remove":
+			case LabelAction.REMOVE:
 				payload["removeLabelIds"] = [x for x in remove]
-			case "add":
+			case LabelAction.ADD:
 				payload["addLabelIds"] = [x for x in add]
-			case "add_remove":
+			case LabelAction.TOGGLE:
 				payload["removeLabelIds"] = [x for x in remove]
 				payload["addLabelIds"] = [x for x in add]
 			case _:
@@ -510,15 +620,15 @@ class Message(object):
 				body=payload
 			).execute()
 			match action:
-				case "add":
+				case LabelAction.ADD:
 					for label in add:
 						if label not in self.labelIds:
 							self.labelIds.append(label)
-				case "remove":
+				case LabelAction.REMOVE:
 					for label in remove:
 						if label in self.labelIds:
 							self.labelIds.remove(label)
-				case "add_remove":
+				case LabelAction.TOGGLE:
 					for label in add:
 						if label not in self.labelIds:
 							self.labelIds.append(label)
@@ -532,3 +642,5 @@ class Message(object):
 			raise e
 		finally:
 			self.google_service.service.close()
+
+

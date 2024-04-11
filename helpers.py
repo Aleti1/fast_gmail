@@ -1,8 +1,7 @@
-from googleapiclient.discovery import build, Resource
+from googleapiclient.discovery import Resource
 from typing import Optional
 from typing import List
 from typing import Union
-from enum import StrEnum
 from enum import Enum
 from dataclasses import dataclass
 from dataclasses import field
@@ -127,24 +126,30 @@ DATE_FORMAT = "%B %d, %Y %H:%M"
 MAX_RESULTS = 10
 
 
-class ApplicationType(StrEnum):
+class LabelAction(Enum):
+	REMOVE = "remove"
+	ADD = "add"
+	TOGGLE = "toggle"
+
+
+class ApplicationType(str, Enum):
 	WEB = "web"
 	DESKTOP = "installed"
 	
-class LabelMessageVisibility(StrEnum):
+class LabelMessageVisibility(str, Enum):
 	SHOW = "show"
 	HIDE = "hide"
 
-class LabelListVisibility(StrEnum):
+class LabelListVisibility(str, Enum):
 	LABEL_SHOW = "labelShow"
 	LABEL_SHOW_IF_UNREAD = "labelShowIfUnread"
 	LABEL_HIDE = "labelHide"
 
-class LabelType(StrEnum):
+class LabelType(str, Enum):
 	SYSTEM = "system"
 	USER = "user"
 
-class Labels(StrEnum):
+class Labels(str, Enum):
 	SPAM = "SPAM"
 	SENT = "SENT"
 	INBOX = "INBOX"

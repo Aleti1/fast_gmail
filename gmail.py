@@ -13,10 +13,18 @@ from googleapiclient.discovery import build
 from google.oauth2.credentials import Credentials
 from googleapiclient.errors import HttpError
 
-from helpers import *
+from message import MessagePartBody
 from message import Message
-from draft import Draft
 from search import SearchParams
+from draft import Draft
+from helpers import *
+
+# If modifying these scopes, delete the file token.json.
+SCOPES = [
+	"https://www.googleapis.com/auth/gmail.modify",
+	"https://www.googleapis.com/auth/gmail.settings.basic"
+]
+
 
 class GmailApi(object):
 	"""https://googleapis.github.io/google-api-python-client/docs/dyn/gmail_v1.users.html"""
@@ -28,16 +36,31 @@ class GmailApi(object):
 
 	def __init__(
 		self,
-		token: str,
-		separator_symbol: Optional[str] = ", ", # used for pagination on get_messages/drafts
+		token_file_path: str = "token.json",
+		credentials_file_path: str = "credentials.json",
+		port: int = 3000, # set the local server port for Authorized redirect URI 
+		separator_symbol: Optional[str] = ", ",
 		user_id: Optional[str] = "me"
 	)-> None:
+
+		# set separator for spliting/joining the array of existing previous_page_tokens for pagination
 		self.SEPARATOR_SYMBOL = separator_symbol
-		if not token:
-			raise InvalidToken(f"Gmail user Token missing")
-		self.credentials = Creds(
-			json_creds = token
-		).get_credentials()
+		# The file token.json stores the user's access and refresh tokens, and is
+		# created automatically when the authorization flow completes for the first time.
+		if os.path.exists(token_file_path):
+			self.credentials = Credentials.from_authorized_user_file(token_file_path, SCOPES)
+		# If there are no (valid) credentials available, let the user log in.
+		if not self.credentials or not self.credentials.valid:
+			if self.credentials and self.credentials.expired and self.credentials.refresh_token:
+				self.credentials.refresh(Request())
+			else:
+				flow = InstalledAppFlow.from_client_secrets_file(
+					credentials_file_path, SCOPES
+				)
+				self.credentials = flow.run_local_server(port=port)
+			# Save the credentials for the next run
+			with open(token_file_path, "w") as token:
+				token.write(self.credentials.to_json())
 		try:
 			# Call the Gmail API and set the instance 
 			self.google_service = GoogleService(
@@ -48,6 +71,8 @@ class GmailApi(object):
 			raise e
 
 	def get_message(self, id: str)-> Union[Message, None]:
+		if not self.google_service:
+			return None
 		return Message(
 			google_service=GoogleService(
 				service=self.google_service.service,
@@ -61,6 +86,8 @@ class GmailApi(object):
 		)
 	
 	def get_draft(self, id: str)-> Union[Message, None]:
+		if not self.google_service:
+			return None
 		return Message(
 			google_service=GoogleService(
 				service=self.google_service.service,
@@ -83,9 +110,8 @@ class GmailApi(object):
 		cc: Optional[List[str] | str]=None,
 		bcc: Optional[List[str] | str]=None,
 		attachments: Optional[List[str] | str]=None,
-		signature: bool = False
+		signature: bool = True
 	)-> Optional[Message]:
-		"""Send and returns the message"""
 		msg = EmailMessage()
 		msg["To"] = to
 		msg["From"] = str(Header(f"{sender} <{sender}>"))
@@ -135,7 +161,6 @@ class GmailApi(object):
 		previous_page_token: Optional[str] = None,
 		query: Union[SearchParams, str] = None
 	)-> GetMessagesResponse:
-		"""Returns inbox messages"""
 		return self._get_messages(
 			max_results = max_results,
 			labels = [Labels.INBOX.value],
@@ -153,7 +178,6 @@ class GmailApi(object):
 		previous_page_token: Optional[str] = None,
 		query: Union[SearchParams, str] = None
 	)-> GetMessagesResponse:
-		"""Returns trash messages"""
 		return self._get_messages(
 			max_results = max_results,
 			labels = [Labels.TRASH.value],
@@ -171,7 +195,6 @@ class GmailApi(object):
 		previous_page_token: Optional[str] = None,
 		query: Union[SearchParams, str] = None
 	)-> GetMessagesResponse:
-		"""Returns spam messages"""
 		return self._get_messages(
 			max_results = max_results,
 			labels = [Labels.SPAM.value],
@@ -205,7 +228,6 @@ class GmailApi(object):
 		self,
 		includeSpamTrash: bool = False,
 		max_results: int = MAX_RESULTS,
-		labels: Union[List[Labels], List[str], None]=None,
 		next_page_token: str = None,
 		existing_pages: Optional[List[str] | str] = None,
 		previous_page_token: Optional[str] = None,
@@ -214,16 +236,30 @@ class GmailApi(object):
 		return self._get_drafts(
 			includeSpamTrash = includeSpamTrash,
 			max_results = max_results,
-			labels = labels,
 			next_page_token = next_page_token,
 			existing_pages=existing_pages,
 			previous_page_token = previous_page_token,
 			query=query.query if isinstance(query, SearchParams) else query
 		)
 
+	def get_attachment(
+		self,
+		message_id: str,
+		attachment_id: str
+	)-> Optional[MessagePartBody]:
+		try:
+			return MessagePartBody(**self.google_service.service.users().messages().attachments().get(
+				userId=self.google_service.user_id,
+				messageId=message_id,
+				id=attachment_id
+			).execute())
+		except HttpError as e:
+			raise e
+		finally:
+			self.google_service.service.close()
+
 	@property
 	def labels(self)-> Optional[List[GmailLabel]]:
-		"""Returns all labels from gmail account"""
 		try:
 			results = self.google_service.service.users().labels().list(
 				userId=self.google_service.user_id
@@ -236,7 +272,6 @@ class GmailApi(object):
 	
 	@property
 	def profile(self)-> Optional[GmailProfile]:
-		"""Returns gmail account profile"""
 		if self.profile_data:
 			return self.profile_data
 		try:
@@ -251,7 +286,6 @@ class GmailApi(object):
 		return self.profile_data
 
 	def _alias_info(self, email_address: str)-> dict:
-		"""Returns gmail account alias"""
 		try:
 			return self.google_service.service.users().settings().sendAs().get(
 				sendAsEmail = email_address,
@@ -272,7 +306,7 @@ class GmailApi(object):
 		previous_page_token: Optional[str] = None,
 		query: str = None
 	)-> GetMessagesResponse:
-		"""Returns a messagesResponse object"""
+		
 		# set existing page tokens holder
 		existing_pages: Optional[List[str]] = existing_pages or []
 		if isinstance(existing_pages, str):
@@ -334,11 +368,8 @@ class GmailApi(object):
 		
 		if next_page_token and next_page_token not in existing_pages:
 			existing_pages.append(next_page_token)
-		for idx, item in enumerate(results):
-			if idx == 3:
-				print(item.message.labelIds, item.message.subject)
-		
-		# TODO: group messages by threads?
+
+		# TODO: group messages by threads???
 		return GetMessagesResponse(
 			previous_page_token = existing_pages[-1] if existing_pages else next_page_token,
 			existing_pages = self.SEPARATOR_SYMBOL.join(existing_pages) if existing_pages else None,
@@ -355,7 +386,7 @@ class GmailApi(object):
 		previous_page_token: Optional[str] = None,
 		query: str = None
 	)-> GetMessagesResponse:
-		"""Returns a messagesResponse object"""
+		
 		# set existing page tokens holder
 		existing_pages: Optional[List[str]] = existing_pages or []
 		if isinstance(existing_pages, str):
@@ -418,8 +449,9 @@ class GmailApi(object):
 			existing_pages.append(next_page_token)
 
 		return GetMessagesResponse(
-			previous_page_tokens = next_page_token,
+			previous_page_token = next_page_token,
 			next_page_token = messages_response.nextPageToken,
+			existing_pages = self.SEPARATOR_SYMBOL.join(existing_pages) if existing_pages else None,
 			messages = [x.message.message for x in results if x.message]
 		) 
 
@@ -431,7 +463,19 @@ class GmailApi(object):
 		next_page_token: str = None,
 		query: str = None
 	)-> MessagesList:
-		""" Returns a list of message ids and thread ids used to get the message contents"""
+		"""
+			request should be json
+			Example:
+			{
+				"messages": [   # List of MessageIdentifiers
+					{
+					object (MessageIdentifiers) 
+					}
+				],
+				"nextPageToken": string, # Token to retrieve the next page of results in the list.
+				"resultSizeEstimate": integer # Estimated total number of results.
+			}
+		"""
 		request: Optional[MessagesList] = None
 		try:
 			request = self.google_service.service.users().messages().list(
@@ -458,7 +502,7 @@ class GmailApi(object):
 		next_page_token: str = None,
 		query: str = None
 	)-> DraftsList:
-		""" Returns a list of drafts ids and thread ids used to get the drafts contents"""
+		
 		request: Optional[MessagesList] = None
 		try:
 			request = self.google_service.service.users().drafts().list(
@@ -476,3 +520,4 @@ class GmailApi(object):
 			if request:
 				return DraftsList(**request)
 			return DraftsList(resultSizeEstimate=0, drafts=[], nextPageToken=None)
+
