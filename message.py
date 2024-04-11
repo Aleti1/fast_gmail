@@ -27,10 +27,12 @@ class MessagePartBody(object):
 	attachmentId: Optional[str] = None
 	data: Optional[str] = None
 
+
 @dataclass
 class MessageHeader(object):
 	name: str
 	value: str
+
 
 class Attachment(object):
 	filename: str

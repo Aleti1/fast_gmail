@@ -1,6 +1,4 @@
 from gmail import GmailApi
-from helpers import Creds
-
 
 
 def main():
