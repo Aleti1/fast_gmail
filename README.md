@@ -24,11 +24,11 @@ https://pypi.org/project/fast-gmail/)
     messages = GmailApi().get_messages(
         includeSpamTrash: bool = False,
         max_results: int = 10,
-		labels: Union[List[Labels], List[str], None] = None,
-		next_page_token: str = None,
-		existing_pages: Optional[List[str] | str] = None,
-		previous_page_token: Optional[str] = None,
-		query: Union[SearchParams, str] = None,
+labels: Union[List[Labels], List[str], None] = None,
+next_page_token: str = None,
+existing_pages: Optional[List[str] | str] = None,
+previous_page_token: Optional[str] = None,
+query: Union[SearchParams, str] = None,
     )
     """Retrieves messages from a user's mailbox.
         Args:
