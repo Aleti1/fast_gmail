@@ -113,6 +113,20 @@ class GmailApi(object):
 		attachments: Optional[List[str] | str]=None,
 		signature: bool = True
 	)-> Optional[Message]:
+		"""Sends an email message.
+			Args:
+				sender (str): Email address of the message sender.
+				to (str): Email address of the recipient.
+				subject (str): Subject line of the email.
+				html (Optional[str], optional): HTML content of the email body. Defaults to None.
+				text (Optional[str], optional): Plain text content of the email body. Defaults to None.
+				cc (Optional[List[str] | str], optional): List of email addresses to carbon copy. Defaults to None.
+				bcc (Optional[List[str] | str], optional): List of email addresses to blind carbon copy. Defaults to None.
+				attachments (Optional[List[str] | str], optional): List of file paths to attach to the email. Defaults to None.
+				signature (bool, optional): Whether to include a signature (if configured). Defaults to True.
+			Returns:
+				Optional[Message]: An object representing the sent message, or None on error.
+			"""
 		msg = EmailMessage()
 		msg["To"] = to
 		msg["From"] = str(Header(f"{sender} <{sender}>"))
@@ -209,7 +223,7 @@ class GmailApi(object):
 		self,
 		includeSpamTrash: bool = False,
 		max_results: int = MAX_RESULTS,
-		labels: Union[List[Labels], List[str], None]=None,
+		labels: Union[List[Labels], List[str], None] = None,
 		next_page_token: str = None,
 		existing_pages: Optional[List[str] | str] = None,
 		previous_page_token: Optional[str] = None,
@@ -307,7 +321,18 @@ class GmailApi(object):
 		previous_page_token: Optional[str] = None,
 		query: str = None
 	)-> GetMessagesResponse:
-		
+		"""Retrieves messages from a user's mailbox.
+			Args:
+				includeSpamTrash (bool, optional): If True, includes messages from spam and trash folders. Defaults to False.
+				max_results (int, optional): Maximum number of messages to return. Defaults to MAX_RESULTS (10).
+				labels (Union[List[Labels], List[str], None], optional): List of label IDs or strings to filter by. Defaults to None (all labels).
+				next_page_token (str, optional): Page token for fetching the next page of results.
+				existing_pages (Optional[List[str] | str], optional): Used internally for pagination. Defaults to None.
+				previous_page_token (Optional[str], optional): Page token for fetching the previous page of results.
+				query (Union[SearchParams, str], optional): Search query to filter messages. Can be a string or a SearchParams object. 
+			Returns:
+				GetMessagesResponse: An object containing the retrieved messages and pagination information.
+		"""
 		# set existing page tokens holder
 		existing_pages: Optional[List[str]] = existing_pages or []
 		if isinstance(existing_pages, str):
@@ -387,7 +412,7 @@ class GmailApi(object):
 		previous_page_token: Optional[str] = None,
 		query: str = None
 	)-> GetMessagesResponse:
-		
+		"""Retrieves drafts from a user's mailbox."""
 		# set existing page tokens holder
 		existing_pages: Optional[List[str]] = existing_pages or []
 		if isinstance(existing_pages, str):
@@ -464,19 +489,6 @@ class GmailApi(object):
 		next_page_token: str = None,
 		query: str = None
 	)-> MessagesList:
-		"""
-			request should be json
-			Example:
-			{
-				"messages": [   # List of MessageIdentifiers
-					{
-					object (MessageIdentifiers) 
-					}
-				],
-				"nextPageToken": string, # Token to retrieve the next page of results in the list.
-				"resultSizeEstimate": integer # Estimated total number of results.
-			}
-		"""
 		request: Optional[MessagesList] = None
 		try:
 			request = self.google_service.service.users().messages().list(
