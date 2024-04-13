@@ -21,6 +21,35 @@ https://pypi.org/project/fast-gmail/)
 
 ## Usage:
 
+### Send message
+``` 
+    messages = GmailApi().send_message(
+        sender: str,
+        to: str,
+        subject: str,
+        html: Optional[str]=None,
+        text: Optional[str]=None,
+        cc: Optional[List[str] | str]=None,
+        bcc: Optional[List[str] | str]=None,
+        attachments: Optional[List[str] | str]=None,
+        signature: bool = True
+    )
+    """Sends an email message.
+        Args:
+            sender (str): Email address of the message sender.
+            to (str): Email address of the recipient.
+            subject (str): Subject line of the email.
+            html (Optional[str], optional): HTML content of the email body. Defaults to None.
+            text (Optional[str], optional): Plain text content of the email body. Defaults to None.
+            cc (Optional[List[str] | str], optional): List of email addresses to carbon copy. Defaults to None.
+            bcc (Optional[List[str] | str], optional): List of email addresses to blind carbon copy. Defaults to None.
+            attachments (Optional[List[str] | str], optional): List of file paths to attach to the email. Defaults to None.
+            signature (bool, optional): Whether to include a signature (if configured). Defaults to True.
+        Returns:
+            Optional[Message]: An object representing the sent message, or None on error.
+    """
+```
+
 ### Get messages
 ```
     messages = GmailApi().get_messages(
@@ -131,67 +160,39 @@ https://pypi.org/project/fast-gmail/)
 
 ```
 
-### Send message
-``` 
-    messages = GmailApi().send_message(
-        sender: str,
-        to: str,
-        subject: str,
-        html: Optional[str]=None,
-        text: Optional[str]=None,
-        cc: Optional[List[str] | str]=None,
-        bcc: Optional[List[str] | str]=None,
-        attachments: Optional[List[str] | str]=None,
-        signature: bool = True
-    )
-    """Sends an email message.
-        Args:
-            sender (str): Email address of the message sender.
-            to (str): Email address of the recipient.
-            subject (str): Subject line of the email.
-            html (Optional[str], optional): HTML content of the email body. Defaults to None.
-            text (Optional[str], optional): Plain text content of the email body. Defaults to None.
-            cc (Optional[List[str] | str], optional): List of email addresses to carbon copy. Defaults to None.
-            bcc (Optional[List[str] | str], optional): List of email addresses to blind carbon copy. Defaults to None.
-            attachments (Optional[List[str] | str], optional): List of file paths to attach to the email. Defaults to None.
-            signature (bool, optional): Whether to include a signature (if configured). Defaults to True.
-        Returns:
-            Optional[Message]: An object representing the sent message, or None on error.
-    """
-```
 ---
 
 ## Classes:
 
 ### class Message:
 ###### Properties:
-- id: Unique identifier for the message.
-- snippet: Shortened summary of the message content.
-- threadId: Thread ID that groups related messages together.
-- historyId: Unique identifier for a specific message history change.
-- sizeEstimate: Approximate size of the message in bytes.
-- internalDate: Internal timestamp representing when the message was created.
-- payload: Object of type MessagePart containing the parsed content of the message body and attachments.
-- raw: Optional property containing the raw email data (if available).
-- labelIds: List of label IDs associated with the message.
-- labels: List of GmailLabel objects representing the message's labels (fetched on demand).
+- **id**: Unique identifier for the message.
+- **snippet**: Shortened summary of the message content.
+- **threadId**: Thread ID that groups related messages together.
+- **historyId**: Unique identifier for a specific message history change.
+- **sizeEstimate**: Approximate size of the message in bytes.
+- **internalDate**: Internal timestamp representing when the message was created.
+- **payload**: Object of type MessagePart containing the parsed content of the message body and attachments.
+- **raw**: Optional property containing the raw email data (if available).
+- **labelIds**: List of label IDs associated with the message.
+- **labels**: List of GmailLabel objects representing the message's labels (fetched on demand).
 
 ###### Additional Message Properties:
-- message_headers: Returns a list of MessageHeader objects from the message's payload (if available).
-- body: Returns the message body content (combines plain text and HTML if both exist).
-- html: Returns the HTML content of the message body (if available).
-- plain: Returns the plain text content of the message body (if available).
-- alternative: Returns the text content of the most appropriate alternative part (if message uses multipart/alternative).
-- recipient: Extracts the recipient's email address from the "To" header (if available).
-- message_id: Extracts the message ID from the message headers (if available).
-- subject: Extracts the subject line from the message headers (if available).
-- sender: Extracts the sender's email address from the "From" header (if available).
-- has_attachments: Checks if the message or its nested parts contain attachments.
-- attachments: Returns a list of Attachment objects for all attachments within the message.
-- is_unread, is_starred, is_important, etc.: Boolean properties indicating the message's label status (unread, starred, important, spam, draft, trash).
-- created_date: Converts the internalDate to a datetime object representing the message creation time.
-- date: Parses the "Received" or "Date" header to get the message delivery date (if available).
-- date_string: Formats the delivery date according to a specified format string (defaults to "%a, %d %b %Y %H:%M:%S %z").
+- **message_headers**: Returns a list of MessageHeader objects from the message's payload (if available).
+- **body**: Returns the message body content (combines plain text and HTML if both exist).
+- **html**: Returns the HTML content of the message body (if available).
+- **plain**: Returns the plain text content of the message body (if available).
+- **alternative**: Returns the text content of the most appropriate alternative part (if message uses multipart/alternative).
+- **recipient**: Extracts the recipient's email address from the "To" header (if available).
+- **message_id**: Extracts the message ID from the message headers (if available).
+- **subject**: Extracts the subject line from the message headers (if available).
+- **sender**: Extracts the sender's email address from the "From" header (if available).
+- **has_attachments**: Checks if the message or its nested parts contain attachments.
+- **attachments**: Returns a list of Attachment objects for all attachments within the message.
+- **is_unread, is_starred, is_important, etc.**: Boolean properties indicating the message's label status (unread, starred, important, spam, draft, trash).
+- **created_date**: Converts the internalDate to a datetime object representing the message creation time.
+- **date**: Parses the "Received" or "Date" header to get the message delivery date (if available).
+- **date_string**: Formats the delivery date according to a specified format string (defaults to "%a, %d %b %Y %H:%M:%S %z").
 
 ###### Methods:
 - mark_as_read, mark_as_unread: Toggles the unread flag for the message.
