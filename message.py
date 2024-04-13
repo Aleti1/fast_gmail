@@ -301,7 +301,7 @@ class Message(object):
 			add_labels(self, labels: Union[List[Labels], List[str]]) -> bool: Adds labels to the message.
 			remove_label(self, label: Union[Labels, str]) -> bool: Removes a label from the message.
 			remove_labels(self, labels: Union[List[Labels], List[str]]) -> bool: Removes labels from the message.
-			modify_labels(self, label_to_add: Optional[Union[List[Labels], List[str]]], labels_to_remove: Optional[Union[List[Labels], List[str]]]) -> bool: Updates message labels by adding and/or removing labels.
+			modify_labels(self, labels_to_add: Optional[Union[List[Labels], List[str]]], labels_to_remove: Optional[Union[List[Labels], List[str]]]) -> bool: Updates message labels by adding and/or removing labels.
     """
 	id: str
 	snippet: str
@@ -569,7 +569,7 @@ class Message(object):
 		return self
 
 	@property
-	def toogle_read_unread(self)-> Self:
+	def toggle_read_unread(self)-> Self:
 		if self.is_unread:
 			self.remove_label(Labels.UNREAD.value)
 		else:
@@ -717,12 +717,12 @@ class Message(object):
 	
 	def modify_labels(
 		self,
-		label_to_add: Optional[Union[List[Labels], List[str]]],
+		labels_to_add: Optional[Union[List[Labels], List[str]]],
 		labels_to_remove: Optional[Union[List[Labels], List[str]]]
 	)-> bool:
 		return self._edit_labels(
 			action = LabelAction.TOGGLE,
-			add = label_to_add,
+			add = labels_to_add,
 			remove = labels_to_remove
 		)
 
