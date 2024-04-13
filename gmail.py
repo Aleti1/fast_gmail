@@ -287,6 +287,16 @@ class GmailApi(object):
 	
 	@property
 	def profile(self)-> Optional[GmailProfile]:
+		"""Retrieves and caches the authorized user's Gmail profile information.
+			This property is a cached accessor for the user's Gmail profile data. 
+			The first call will fetch the data from the Gmail API and store it internally. 
+			Subsequent calls will return the cached data unless it's explicitly cleared.
+			Returns:
+				Optional[GmailProfile]: An object containing the user's Gmail profile information, 
+				or None if there's an error fetching the data.
+			Raises:
+				HttpError: An exception if there is an error fetching profile information from the Gmail API.
+		"""
 		if self.profile_data:
 			return self.profile_data
 		try:
@@ -301,6 +311,17 @@ class GmailApi(object):
 		return self.profile_data
 
 	def _alias_info(self, email_address: str)-> dict:
+		"""Retrieves information about a specific send-as alias for the authorized user.
+			Args:
+				email_address (str): The email address of the send-as alias to retrieve information for.
+			Raises:
+				HttpError: An exception if there is an error fetching alias information from the Gmail API.
+			Returns:
+				dict: A dictionary containing information about the alias, 
+					or an empty dictionary if the alias is not found.
+
+			This method is private and intended for internal use. 
+		"""
 		try:
 			return self.google_service.service.users().settings().sendAs().get(
 				sendAsEmail = email_address,

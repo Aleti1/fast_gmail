@@ -129,19 +129,23 @@ class LabelAction(Enum):
 class ApplicationType(str, Enum):
 	WEB = "web"
 	DESKTOP = "installed"
-	
+
+
 class LabelMessageVisibility(str, Enum):
 	SHOW = "show"
 	HIDE = "hide"
+
 
 class LabelListVisibility(str, Enum):
 	LABEL_SHOW = "labelShow"
 	LABEL_SHOW_IF_UNREAD = "labelShowIfUnread"
 	LABEL_HIDE = "labelHide"
 
+
 class LabelType(str, Enum):
 	SYSTEM = "system"
 	USER = "user"
+
 
 class Labels(str, Enum):
 	SPAM = "SPAM"
@@ -157,6 +161,7 @@ class Labels(str, Enum):
 	CATEGORY_UPDATES = "CATEGORY_UPDATES"
 	CATEGORY_PERSONAL = "CATEGORY_PERSONAL"
 	CATEGORY_PROMOTIONS = "CATEGORY_PROMOTIONS"
+
 	
 class AttachmentAction(Enum):
 	IGNORE = "ignore"
@@ -249,6 +254,15 @@ class GmailLabel(object):
 
 @dataclass
 class GetMessagesResponse(object):
+	"""Represents the response object containing retrieved messages and pagination information.
+		Attributes:
+			next_page_token (Optional[str], optional): Token for fetching the next page of results. Defaults to None.
+			existing_pages (Optional[str], optional): Used internally for pagination. Defaults to None.
+			previous_page_token (Optional[List[str | None]], optional): Token for fetching the previous page of results (may be empty list). Defaults to [].
+			messages (List[Message]): List of retrieved message objects.
+
+		This dataclass also provides list-like methods for iterating, checking membership, length, and accessing/modifying elements within the `messages` list.  
+    """
 	next_page_token: Optional[str] = None
 	existing_pages: Optional[str] = None
 	previous_page_token: Optional[List[str | None]] = field(default_factory=lambda: [])
