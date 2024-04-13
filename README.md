@@ -46,7 +46,7 @@ https://pypi.org/project/fast-gmail/)
     """
 ```
 
-### Get INBOX messages
+### Get INBOX/SPAM/TRASH messages
 ```
     messages = GmailApi().get_inbox_messages(
         max_results: int = MAX_RESULTS,
@@ -59,6 +59,76 @@ https://pypi.org/project/fast-gmail/)
     # helpers for spam or trash
     messages = GmailApi().get_spam_messages()
     messages = GmailApi().get_trash_messages()
+```
+
+### GET message
+```
+    message = GmailApi().get_message(id)
+    # returns a Message object
+```
+
+### GET attachment
+```
+    message = GmailApi().get_message(id)
+    attachment_id = None
+    attachment_name = None
+    for attacment in message.attachments:
+        attachment_id = attachment.part_id
+        attachment_name = attachment.filename
+
+    # get attachment by id or filename
+    by_id = message.get_attachment(id=attachment_id)
+    by_name = message.get_attachment(filename=attachment_name)
+    # returns an Attachment object
+```
+
+### Message actions
+```
+    message = GmailApi().get_message(id)
+
+    # mark read or unread
+    message.toggle_read_unread
+    # or
+    message.mark_as_read
+    # or
+    message.mark_as_unread
+
+    # spam
+    message.toggle_spam
+    # or
+    message.mark_spam
+    message.mark_not_spam
+
+    # trash
+    message.toggle_trash
+    # or
+    message.move_to_trash
+    message.move_from_trash
+
+    # starred
+    message.toggle_starred
+    message.mark_starred
+    message.mark_not_starred
+
+    #important
+    message.toggle_important
+    message.mark_important
+    message.mark_not_important
+
+    # other properties
+    message.body
+    message.html
+    message.plain
+    message.recipient
+    message.subject
+    message.sender
+    message.snippet
+    message.is_starred
+    message.is_important
+    message.is_spam
+    message.is_unread
+    ...
+
 ```
 
 ### Send message
