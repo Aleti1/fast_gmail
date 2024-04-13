@@ -20,6 +20,7 @@ from search import SearchParams
 from draft import Draft
 from helpers import *
 
+
 # If modifying these scopes, delete the file token.json.
 SCOPES = [
 	"https://www.googleapis.com/auth/gmail.modify",
@@ -43,7 +44,7 @@ class GmailApi(object):
 		separator_symbol: Optional[str] = ", ",
 		user_id: Optional[str] = "me"
 	)-> None:
-
+		"""https://github.com/googleapis/google-api-python-client/blob/main/docs/oauth-installed.md"""
 		# set separator for spliting/joining the array of existing previous_page_tokens for pagination
 		self.SEPARATOR_SYMBOL = separator_symbol
 		# The file token.json stores the user's access and refresh tokens, and is
@@ -53,7 +54,13 @@ class GmailApi(object):
 		# If there are no (valid) credentials available, let the user log in.
 		if not self.credentials or not self.credentials.valid:
 			if self.credentials and self.credentials.expired and self.credentials.refresh_token:
-				self.credentials.refresh(Request())
+				self.credentials = Credentials(
+					token=None,  # No initial token provided, refresh token will be used
+					refresh_token=self.credentials.refresh_token,
+					token_uri=self.credentials.token_uri,
+					client_id=self.credentials.client_id,
+					client_secret=self.credentials.client_secret
+				)
 			else:
 				flow = InstalledAppFlow.from_client_secrets_file(
 					credentials_file_path, SCOPES
