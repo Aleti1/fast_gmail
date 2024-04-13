@@ -107,10 +107,13 @@ https://pypi.org/project/fast-gmail/)
         attachment_id = attachment.part_id
         attachment_name = attachment.filename
 
-    # get attachment by id or filename
+    # get attachment by id
     by_id = message.get_attachment(id=attachment_id)
-    by_name = message.get_attachment(filename=attachment_name)
-    # returns an Attachment object
+    # or by filename
+    by_name = message.get_attachment(filename=attachment_name) # returns an Attachment object
+
+    # save file to disk
+    by_id.save(filepath=f"/tmp/{attachment.filename}", overwrite=True)
 ```
 
 ### Message actions
