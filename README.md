@@ -93,7 +93,7 @@ https://pypi.org/project/fast-gmail/)
 
 ## Classes:
 
-### Message
+### class Message:
 ###### Properties:
 - id: Unique identifier for the message.
 - snippet: Shortened summary of the message content.
@@ -142,7 +142,7 @@ https://pypi.org/project/fast-gmail/)
 
 Overall, this Message class provides a comprehensive way to access and manage individual email messages within a Gmail account. It allows you to retrieve message details, content, attachments, labels, and perform various actions like marking as read/unread, starring, labeling, and trash management.
 
-### Attachment
+### class Attachment:
 ###### Properties:
 - filename (str): This attribute stores the filename of the attachment.
 - mimeType (str): This attribute stores the MIME type of the attachment content, which specifies the format of the data (e.g., image/jpeg, text/plain).
