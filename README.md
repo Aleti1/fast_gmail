@@ -24,11 +24,11 @@ https://pypi.org/project/fast-gmail/)
     messages = GmailApi().get_messages(
         includeSpamTrash: bool = False,
         max_results: int = 10,
-labels: Union[List[Labels], List[str], None] = None,
-next_page_token: str = None,
-existing_pages: Optional[List[str] | str] = None,
-previous_page_token: Optional[str] = None,
-query: Union[SearchParams, str] = None,
+        labels: Union[List[Labels], List[str], None] = None,
+        next_page_token: str = None,
+        existing_pages: Optional[List[str] | str] = None,
+        previous_page_token: Optional[str] = None,
+        query: Union[SearchParams, str] = None,
     )
     """Retrieves messages from a user's mailbox.
         Args:
@@ -48,10 +48,10 @@ query: Union[SearchParams, str] = None,
 ```
     messages = GmailApi().get_inbox_messages(
         max_results: int = MAX_RESULTS,
-		next_page_token: str = None,
-		existing_pages: Optional[List[str] | str] = None,
-		previous_page_token: Optional[str] = None,
-		query: Union[SearchParams, str] = None
+        next_page_token: str = None,
+        existing_pages: Optional[List[str] | str] = None,
+        previous_page_token: Optional[str] = None,
+        query: Union[SearchParams, str] = None
     )
 
     # helpers for spam or trash
@@ -63,14 +63,14 @@ query: Union[SearchParams, str] = None,
 ``` 
     messages = GmailApi().send_message(
         sender: str,
-		to: str,
-		subject: str,
-		html: Optional[str]=None,
-		text: Optional[str]=None,
-		cc: Optional[List[str] | str]=None,
-		bcc: Optional[List[str] | str]=None,
-		attachments: Optional[List[str] | str]=None,
-		signature: bool = True
+        to: str,
+        subject: str,
+        html: Optional[str]=None,
+        text: Optional[str]=None,
+        cc: Optional[List[str] | str]=None,
+        bcc: Optional[List[str] | str]=None,
+        attachments: Optional[List[str] | str]=None,
+        signature: bool = True
     )
     """Sends an email message.
         Args:
