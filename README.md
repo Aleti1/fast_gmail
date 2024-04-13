@@ -23,6 +23,8 @@ https://pypi.org/project/fast-gmail/)
 
 ### Send message
 ``` 
+    from fast_gmail import GmailApi
+
     messages = GmailApi().send_message(
         sender: str,
         to: str,
