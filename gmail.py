@@ -12,6 +12,7 @@ from email import utils
 from googleapiclient.discovery import build
 from google.oauth2.credentials import Credentials
 from googleapiclient.errors import HttpError
+from google_auth_oauthlib.flow import InstalledAppFlow
 
 from message import MessagePartBody
 from message import Message
