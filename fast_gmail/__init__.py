@@ -1,1 +1,1 @@
-"""fast-gmail"""
+"""fast_gmail"""
