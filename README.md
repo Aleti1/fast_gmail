@@ -1,6 +1,6 @@
 # Fast-gmail a simple python wrapper for gmailapi
 
-[![PyPI](https://img.shields.io/pypi/v/fast-gmail?label=PyPI%20downloads)](https://pypi.org/project/fast-gmail/)
+[![PyPI](https://img.shields.io/pypi/v/fast-gmail)](https://pypi.org/project/fast-gmail/)
 
 ---
 ## Functionalities:
