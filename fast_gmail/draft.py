@@ -1,4 +1,5 @@
-from message import Message
+from fast_gmail.message import Message
+
 from googleapiclient.discovery import Resource
 
 

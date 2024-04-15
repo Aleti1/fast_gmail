@@ -1,4 +1,3 @@
-from googleapiclient.discovery import Resource
 from typing import Optional
 from typing import List
 from typing import Union
@@ -6,6 +5,7 @@ from enum import Enum
 from dataclasses import dataclass
 from dataclasses import field
 
+from googleapiclient.discovery import Resource
 from googleapiclient.errors import HttpError
 
 

@@ -21,6 +21,23 @@ https://pypi.org/project/fast-gmail/)
 
 ## Usage:
 
+### Initialization
+- Go to https://console.developers.google.com/apis/credentials and login to correct account
+- Setup Oauth consent screen
+- Create new credentials with OAuth cliet ID for web or installed app
+- Set Authorized Javascript origins to http://localhost:3000/
+- Set Authorized redirect URIs to http://localhost:3000/
+- Download the credentials.json file
+- Go to Enable APIs & services and enable GmailAPI
+
+With credentials.json file downloaded we can connect to Gmail
+```
+gmail = GmailApi(
+    credentials_file_path = __path_to_credentials_json_file__,
+    port = 3000, # default is 3000 but you can use any other port IMPORTANT: if you change this default value don't forget to also changed on Authorized Javascript origins & Authorized redirect URIs
+)
+```
+
 ### Send message
 ``` 
     from fast_gmail import GmailApi
@@ -169,6 +186,42 @@ https://pypi.org/project/fast-gmail/)
 
 ## Classes:
 
+### class GmailApi:
+###### Attributes:
+
+- **credentials (Optional[Credentials])**: Stores user credentials (OAuth tokens) for accessing Gmail.
+- **google_service (GoogleService)**: An instance of GoogleService used for making API requests.
+- **max_results (int)**: Maximum number of messages to retrieve per request (default 10).
+- **SEPARATOR_SYMBOL (str)**: String used for separating page tokens during pagination.
+- **profile_data (Optional[GmailProfile])**: Caches the user's Gmail profile information.
+
+###### Constructor (__init__):
+- Initializes the GmailApi object.
+- Reads credentials from token and credentials files.
+- Handles refreshing expired tokens.
+- Creates a GoogleService instance for making API calls.
+
+###### Methods:
+###### Message Retrieval:
+- **get_message(id: str)-> Optional[Message]**: Retrieves a message by its ID.
+- **get_draft(id: str)-> Optional[Message]**: Retrieves a draft by its ID.
+###### Message Sending:
+- **send_message(sender, to, subject, ...)-> Optional[Message]**: Sends an email message with various options (text, HTML, attachments, signature).
+###### Inbox Management:
+- **get_inbox_messages()-> GetMessagesResponse**: Retrieves messages from the inbox.
+Similar methods exist for getting trash, spam, and all messages with various filtering options.
+###### Drafts Management:
+- **get_draft_messages()**: Retrieves draft messages.
+###### Attachment Management:
+- **get_attachment(message_id: str, attachment_id: str) -> Optional[MessagePartBody]**: Retrieves an attachment from a message.
+###### Profile and Label Management:
+- **labels**: Returns a list of user labels.
+- **profile**: Retrieves and caches the user's Gmail profile information.
+
+Overall, this code provides a well-structured and functional interface for interacting with Gmail using the Gmail API.
+
+---
+
 ### class Message:
 ###### Properties:
 - **id**: Unique identifier for the message.
@@ -199,6 +252,8 @@ https://pypi.org/project/fast-gmail/)
 - **date**: Parses the "Received" or "Date" header to get the message delivery date (if available).
 - **date_string**: Formats the delivery date according to a specified format string (defaults to "%a, %d %b %Y %H:%M:%S %z").
 
+---
+
 ###### Methods:
 - **mark_as_read, mark_as_unread**: Toggles the unread flag for the message.
 - **toogle_read_unread**: Shortcut to toggle the unread flag based on the current state.
@@ -218,6 +273,8 @@ https://pypi.org/project/fast-gmail/)
 
 Overall, this Message class provides a comprehensive way to access and manage individual email messages within a Gmail account. It allows you to retrieve message details, content, attachments, labels, and perform various actions like marking as read/unread, starring, labeling, and trash management.
 
+---
+
 ### class Attachment:
 ###### Properties:
 - **filename (str)**: This attribute stores the filename of the attachment.
@@ -235,3 +292,9 @@ Overall, the Attachment class provides functionality to manage attachments assoc
 
 ---
 
+### class GetMessagesResponse:
+###### Attributes:
+- **next_page_token (Optional[str], optional)**: Token for fetching the next page of results. Defaults to None.
+- **existing_pages (Optional[str], optional)**: Used internally for pagination. Defaults to None. List like string of page tokens separated by GmailApi.SEPARATOR_SYMBOL
+- **previous_page_token (Optional[List[str | None]], optional)**: Token for fetching the previous page of results (may be empty list). Defaults to [].
+- **messages (List[Message])**: List of retrieved message objects.

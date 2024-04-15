@@ -14,11 +14,11 @@ from google.oauth2.credentials import Credentials
 from googleapiclient.errors import HttpError
 from google_auth_oauthlib.flow import InstalledAppFlow
 
-from message import MessagePartBody
-from message import Message
-from search import SearchParams
-from draft import Draft
-from helpers import *
+from fast_gmail.message import MessagePartBody
+from fast_gmail.message import Message
+from fast_gmail.search import SearchParams
+from fast_gmail.draft import Draft
+from fast_gmail.helpers import *
 
 
 # If modifying these scopes, delete the file token.json.
@@ -78,7 +78,7 @@ class GmailApi(object):
 		except HttpError as e:
 			raise e
 
-	def get_message(self, id: str)-> Union[Message, None]:
+	def get_message(self, id: str)-> Optional[Message]:
 		if not self.google_service:
 			return None
 		return Message(
@@ -93,7 +93,7 @@ class GmailApi(object):
 			).execute()
 		)
 	
-	def get_draft(self, id: str)-> Union[Message, None]:
+	def get_draft(self, id: str)-> Optional[Message]:
 		if not self.google_service:
 			return None
 		return Message(

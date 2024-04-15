@@ -9,11 +9,11 @@ from dataclasses import dataclass
 from datetime import datetime as dt
 from datetime import timezone
 
-from helpers import GoogleService
-from helpers import Labels
-from helpers import GmailLabel
-from helpers import LabelAction
-from helpers import DATE_FORMAT
+from fast_gmail.helpers import GoogleService
+from fast_gmail.helpers import Labels
+from fast_gmail.helpers import GmailLabel
+from fast_gmail.helpers import LabelAction
+from fast_gmail.helpers import DATE_FORMAT
 
 from googleapiclient.errors import HttpError
 
