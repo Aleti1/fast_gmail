@@ -1,7 +1,7 @@
 # Fast-gmail a simple python wrapper for gmailapi
 
 [![PyPI Downloads](https://img.shields.io/pypi/dm/fast-gmail.svg?label=PyPI%20downloads)](
-https://pypi.org/project/fast-gmail/)
+https://pypi.org/project/fast-gmail/1.0.0/)
 
 ---
 ## Functionalities:
@@ -24,7 +24,7 @@ https://pypi.org/project/fast-gmail/)
 ### Initialization
 - Go to https://console.developers.google.com/apis/credentials and login to correct account
 - Setup Oauth consent screen
-- Create new credentials with OAuth cliet ID for web or installed app
+- Create new credentials with OAuth client ID for web or installed app
 - Set Authorized Javascript origins to http://localhost:3000/
 - Set Authorized redirect URIs to http://localhost:3000/
 - Download the credentials.json file
