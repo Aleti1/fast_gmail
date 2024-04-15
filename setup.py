@@ -6,7 +6,7 @@ with open("README.md", "r") as f:
 
 setup(
     name="fast_gmail",
-    version="1.0.0",
+    version="1.0.3",
     description="GmailApi wrapper",
     long_description=long_descrition,  # Load description from README
     long_description_content_type='text/markdown',
@@ -14,8 +14,7 @@ setup(
     author_email="aleti.open.source@gmail.com",
     url="https://github.com/aleti1/fast_gmail",
     license="MIT",
-    package_dir={"":"fast_gmail"},
-    packages=find_packages(where="fast_gmail"),
+    include_package_data=True,
     python_requires=">=3.10",
     install_requires=[
         "google-api-python-client == 2.125.0",

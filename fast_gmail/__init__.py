@@ -1,1 +1,1 @@
-"""fast_gmail"""
+from fast_gmail.gmail import *
