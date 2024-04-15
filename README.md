@@ -22,8 +22,7 @@
 - Go to https://console.developers.google.com/apis/credentials and login to correct account
 - Setup Oauth consent screen
 - Create new credentials with OAuth client ID for web or installed app
-- Set Authorized Javascript origins to http://localhost:3000/
-- Set Authorized redirect URIs to http://localhost:3000/
+- Set Authorized redirect URIs to http://localhost:3000/ (Notice the trailing slash)
 - Download the credentials.json file
 - Go to Enable APIs & services and enable GmailAPI
 
@@ -31,7 +30,7 @@ With credentials.json file downloaded we can connect to Gmail
 ```
 gmail = GmailApi(
     credentials_file_path = __path_to_credentials_json_file__,
-    port = 3000, # default is 3000 but you can use any other port IMPORTANT: if you change this default value don't forget to also changed on Authorized Javascript origins & Authorized redirect URIs
+    port = 3000, # default is 3000 IMPORTANT: if you change this default value don't forget to also changed on Authorized redirect URIs
 )
 ```
 
