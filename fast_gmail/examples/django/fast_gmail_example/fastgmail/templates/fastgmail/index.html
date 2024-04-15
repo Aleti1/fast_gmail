@@ -1,0 +1,26 @@
+{% load partials %}
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<title>Fast-gmail django example</title>
+		<link href="css/style.css" rel="stylesheet">
+		<script src="https://unpkg.com/htmx.org@1.9.11" integrity="sha384-0gxUXCCR8yv9FM2b+U3FDbsKthCI66oH5IA9fHppQq9DDMHuMauqq1ZHBpJxQ0J0" crossorigin="anonymous"></script>
+	</head>
+	<body>
+		<div>
+			{% if request.user.gmail %}
+			{% else %}
+				<h1>Login with gmail account</h1>
+				<button type="button"
+					onclick="window.open('{{ auth_url }}', '_blank', 'location=yes,height=570,width=520,scrollbars=yes,status=yes');">
+					Click to login with gmail
+				</button>
+			{% endif %}
+		</div>
+
+		{% partialdef 'login' %}
+		{% endpartialdef %}
+	</body>
+</html>

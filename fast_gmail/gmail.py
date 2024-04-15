@@ -4,6 +4,7 @@ from typing import List
 import mimetypes
 import base64
 import os
+import json
 
 from email.message import EmailMessage
 from email.header import Header
@@ -12,7 +13,7 @@ from email import utils
 from googleapiclient.discovery import build
 from google.oauth2.credentials import Credentials
 from googleapiclient.errors import HttpError
-from google_auth_oauthlib.flow import InstalledAppFlow
+from google_auth_oauthlib.flow import InstalledAppFlow, Flow
 
 from fast_gmail.message import MessagePartBody
 from fast_gmail.message import Message
@@ -26,6 +27,9 @@ SCOPES = [
 	"https://www.googleapis.com/auth/gmail.modify",
 	"https://www.googleapis.com/auth/gmail.settings.basic"
 ]
+
+
+
 
 
 class GmailApi(object):
@@ -42,15 +46,19 @@ class GmailApi(object):
 		credentials_file_path: str = "credentials.json",
 		port: int = 3000, # set the local server port for Authorized redirect URI 
 		separator_symbol: Optional[str] = ", ",
-		user_id: Optional[str] = "me"
+		user_id: Optional[str] = "me",
+		application_type: ApplicationType = ApplicationType.DESKTOP
 	)-> None:
 		"""https://github.com/googleapis/google-api-python-client/blob/main/docs/oauth-installed.md"""
+		print("---->", application_type, "<----")
 		# set separator for spliting/joining the array of existing previous_page_tokens for pagination
 		self.SEPARATOR_SYMBOL = separator_symbol
 		# The file token.json stores the user's access and refresh tokens, and is
 		# created automatically when the authorization flow completes for the first time.
 		if os.path.exists(token_file_path):
 			self.credentials = Credentials.from_authorized_user_file(token_file_path, SCOPES)
+		if not os.path.exists(credentials_file_path):
+			raise FileNotFoundError(f"{credentials_file_path=} NOT FOUND!")
 		# If there are no (valid) credentials available, let the user log in.
 		if not self.credentials or not self.credentials.valid:
 			if self.credentials and self.credentials.expired and self.credentials.refresh_token:
@@ -62,10 +70,22 @@ class GmailApi(object):
 					client_secret=self.credentials.client_secret
 				)
 			else:
-				flow = InstalledAppFlow.from_client_secrets_file(
-					credentials_file_path, SCOPES
-				)
-				self.credentials = flow.run_local_server(port=port)
+				if application_type == ApplicationType.DESKTOP:
+					flow = InstalledAppFlow.from_client_secrets_file(
+						credentials_file_path, SCOPES
+					)
+					self.credentials = flow.run_local_server(port=port)
+				else:
+					with open(credentials_file_path, "r") as f:
+						self.redirect_uri = json.loads(f.read())["web"]["redirect_uris"][1]
+					
+					flow = Flow.from_client_secrets_file(
+						credentials_file_path,
+						SCOPES,
+						redirect_uri=self.redirect_uri
+					)
+					self.auth_url = flow.authorization_url()[0]
+					return
 			# Save the credentials for the next run
 			with open(token_file_path, "w") as token:
 				token.write(self.credentials.to_json())
