@@ -1,7 +1,5 @@
 # Fast-gmail a simple python wrapper for gmailapi
 
-[![PyPI](https://img.shields.io/pypi/v/fast-gmail)](https://pypi.org/project/fast-gmail/)
-
 ---
 ## Functionalities:
 - Send text/html messages

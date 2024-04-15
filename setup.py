@@ -6,7 +6,7 @@ with open("README.md", "r") as f:
 
 setup(
     name="fast_gmail",
-    version="1.0.3",
+    version="1.0.4",
     description="GmailApi wrapper",
     long_description=long_descrition,  # Load description from README
     long_description_content_type='text/markdown',
