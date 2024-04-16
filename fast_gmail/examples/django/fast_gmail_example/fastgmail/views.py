@@ -1,22 +1,9 @@
 from django.shortcuts import render, redirect
 from django.http import HttpResponse, HttpResponseBadRequest
 import sys         
-import importlib.util        
- 
-# # passing the file name and path as argument
-# spec = importlib.util.spec_from_file_location(
-#   "message", "/home/aleti/Desktop/work/python/development/fast_gmail/fast_gmail/message.py")    
- 
-# # importing the module as foo 
-# Message = importlib.util.module_from_spec(spec)        
-# spec.loader.exec_module(Message)
 
-
-# # appending the directory of gmail.py 
-# # in the sys.path list
-sys.path.insert(1, '/home/aleti/Desktop/work/python/development/fast_gmail/')  
-# print([x for x in sys.path])
-# from gmail import GmailApi
+# appending the directory of gmail.py
+sys.path.insert(1, '/home/aleti/Desktop/work/python/development/fast-gmail/')  
 
 from fast_gmail import GmailApi
 from fast_gmail.helpers import *
@@ -25,8 +12,12 @@ from fast_gmail.helpers import *
 def index(request):
     # if request.user.token:
     #     return redirect("emails")
-    gmail = GmailApi(credentials_file_path="./credentials.json", application_type=ApplicationType.WEB)
-    print(gmail)
+    gmail = GmailApi(
+        credentials_file_path="./credentials.json",
+        port=request.get_port(),
+        application_type=ApplicationType.WEB
+    )
+    print(gmail.__dict__)
     
     return render(
         request,
@@ -43,7 +34,19 @@ def emails(request):
         request,
         "fastgmail/emails.html",
         {
-            "messages": Gmail(request.user.token).get_messages()
+            "messages": GmailApi(request.user.token).get_messages()
         }
     )
 
+def login(request):
+    print(request.GET)
+    gmail = GmailApi(
+        credentials_file_path="./credentials.json",
+        port=request.get_port(),
+        code=request.GET.get("code", None)
+    )
+    print(gmail.__dict__)
+    request.user.token = gmail.credentials
+    request.user.gmail = gmail.profile.emailAddress
+    request.user.save()
+    return HttpResponse("Dai dai dai")
