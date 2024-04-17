@@ -83,9 +83,15 @@ class GmailApi(object):
 						if not cred_payload:
 							raise Exception(f"Could't read {credentials_file_path=}")
 						if not "web" in cred_payload:
-							raise Exception(f"{cred_payload=} content missing. \n\033[91mDid you create credentials for Web app?\033[0m")
-						if not "redirect_uris" in cred_payload["web"]:
-							raise Exception(f"Missing `redirect_uris` key from {cred_payload['web']}. \n\033[91mDid you define Authorized redirect URIs?\033[0m")
+							raise Exception(
+								f"{cred_payload=} content missing."
+								"\n\033[91mDid you create credentials for Web app?\033[0m"
+							)
+						if not "redirect_uris" in cred_payload["web"] or not cred_payload["web"]["redirect_uris"]:
+							raise Exception(
+								f"Missing `redirect_uris` key from {cred_payload['web']}."
+								"\n\033[91mDid you define Authorized redirect URIs?\033[0m"
+							)
 						
 						redirect_uris = cred_payload["web"]["redirect_uris"]
 						for uri in redirect_uris:
