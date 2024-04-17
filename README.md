@@ -192,6 +192,8 @@ gmail = GmailApi(
 - **max_results (int)**: Maximum number of messages to retrieve per request (default 10).
 - **SEPARATOR_SYMBOL (str)**: String used for separating page tokens during pagination.
 - **profile_data (Optional[GmailProfile])**: Caches the user's Gmail profile information.
+- **application_type: ApplicationType = ApplicationType.WEB**: Type of application WEB or INSTALLED,
+- **code: Optional[str] = None**: gmail oAuth response code for creating token.json file after successful login
 
 ###### Constructor (__init__):
 - Initializes the GmailApi object.
