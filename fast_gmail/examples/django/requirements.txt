@@ -3,7 +3,6 @@ cachetools==5.3.3
 certifi==2024.2.2
 charset-normalizer==3.3.2
 Django==5.0.4
-django-template-partials==24.2
 google-api-core==2.18.0
 google-api-python-client==2.125.0
 google-auth==2.29.0
