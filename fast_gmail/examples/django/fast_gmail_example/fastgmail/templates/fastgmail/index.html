@@ -11,16 +11,38 @@
 	<body>
 		<div>
 			{% if request.user.gmail %}
+			<table>
+				<thead>
+					<tr>
+						<th>Sender</th>
+						<th>Subject</th>
+						<th>Snippet</th>
+						<th>Labels</th>
+					</tr>
+				</thead>
+				<tbody>
+					{% for message in data.messages %}
+					<tr>
+						<td>{{message.sender}}</td>
+						<td>{{message.subject}}</td>
+						<td>{{message.snippet}}</td>
+						<td>{{message.labelIds}}</td>
+					</tr>
+					{% endfor %}
+				</tbody>
+			</table>
 			{% else %}
+			<div hx-get="{% url 'index' %}"
+				hx-target="body"
+				hx-trigger="every 2s"> <!-- refresh window every 2 seconds until a gmail account is logged in -->
 				<h1>Login with gmail account</h1>
+				<p>After a successful login this window will reload, and render the inbox messages</p>
 				<button type="button"
 					onclick="window.open('{{ auth_url }}', '_blank', 'location=yes,height=570,width=520,scrollbars=yes,status=yes');">
 					Click to login with gmail
 				</button>
+			</div>
 			{% endif %}
 		</div>
-
-		{% partialdef 'login' %}
-		{% endpartialdef %}
 	</body>
 </html>

@@ -338,6 +338,21 @@ class Message(object):
 			return None
 		return self.payload.headers
 
+	def _extract_content(self, part: MessagePart, result: dict)-> None:
+		# TODO: load cid: images into content
+		if part.mimeType not in ["text/plain", "text/html"]:
+			for sub_part in part.parts:
+				self._extract_content(sub_part, result)
+		if not part.mimeType in result:
+			result[part.mimeType] = []
+		if not part.body:
+			return
+		if not part.body.data:
+			return
+		result[part.mimeType].append(
+			base64.urlsafe_b64decode(part.body.data).decode("utf-8")
+		)
+
 	def _content(self)-> Optional[dict]:
 		if not self.payload:
 			return None
@@ -356,31 +371,7 @@ class Message(object):
 					self.payload.body.data
 				).decode("utf-8")} if self.payload.body else None
 		for part in self.payload.parts:
-			if part.mimeType == "multipart/alternative":
-				for sub_part in part.parts:
-					if sub_part.mimeType not in ["text/plain", "text/html"]:
-						continue
-					if not sub_part.mimeType in result:
-						result[sub_part.mimeType] = []
-					if not sub_part.body:
-						continue
-					if not sub_part.body.data:
-						continue
-					result[sub_part.mimeType].append(
-						base64.urlsafe_b64decode(sub_part.body.data).decode("utf-8")
-					)
-			else:
-				if part.mimeType not in ["text/plain", "text/html"]:
-					continue
-				if not part.mimeType in result:
-					result[part.mimeType] = []
-				if not part.body:
-					continue
-				if not part.body.data:
-					continue
-				result[part.mimeType].append(
-					base64.urlsafe_b64decode(part.body.data).decode("utf-8")
-				)
+			self._extract_content(part, result)
 		return result
 	
 	@property
@@ -428,9 +419,7 @@ class Message(object):
 		if not self.message_headers:
 			return None
 		for header in self.message_headers:
-			if header.name == "Message-ID":
-				return header.value
-			if header.name == "Message-Id":
+			if header.name.casefold() == "message-id":
 				return header.value
 		return None
 

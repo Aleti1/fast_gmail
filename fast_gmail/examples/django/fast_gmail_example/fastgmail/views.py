@@ -1,8 +1,12 @@
 from django.shortcuts import render, redirect
 from django.http import HttpResponse, HttpResponseBadRequest
-import sys         
+from django.contrib.auth import authenticate, login
+from fastgmail.models import ExampleUser
+from django.contrib.auth import logout
+import sys
+import os    
 
-# appending the directory of gmail.py
+# appending the directory of gmail.py for import
 sys.path.insert(1, '/home/aleti/Desktop/work/python/development/fast-gmail/')  
 
 from fast_gmail import GmailApi
@@ -10,43 +14,51 @@ from fast_gmail.helpers import *
 
 # Create your views here.
 def index(request):
-    # if request.user.token:
-    #     return redirect("emails")
     gmail = GmailApi(
-        credentials_file_path="./credentials.json",
-        port=request.get_port(),
-        application_type=ApplicationType.WEB
+        port=request.get_port() # set the djano running app port
     )
-    print(gmail.__dict__)
-    
+    context = {}
+    if request.user.is_authenticated:
+        context["data"] = gmail.get_inbox_messages()
+    else:
+        context["auth_url"] = gmail.auth_url
     return render(
         request,
         "fastgmail/index.html",
-        {
-            "auth_url": gmail.auth_url
-        }
+        context
     )
 
-def emails(request):
-    if not request.user.token:
-        return HttpResponseBadRequest("Need to login with gmail first")
-    return render(
-        request,
-        "fastgmail/emails.html",
-        {
-            "messages": GmailApi(request.user.token).get_messages()
-        }
-    )
-
-def login(request):
-    print(request.GET)
+def login_gmail(request):
     gmail = GmailApi(
         credentials_file_path="./credentials.json",
-        port=request.get_port(),
-        code=request.GET.get("code", None)
+        code=request.GET.get("code", None),
+        port=request.get_port()
     )
-    print(gmail.__dict__)
-    request.user.token = gmail.credentials
-    request.user.gmail = gmail.profile.emailAddress
+    # create new user
+    user = ExampleUser.objects.create(
+        username="username", 
+        email="email@address.test"
+    )
+    # append data to created user
+    user.token = gmail.credentials
+    user.gmail = gmail.profile.emailAddress
+    user.set_password("123456")
+    # save user to db
+    user.save()
+    # login the new user
+    login(request, user, backend='django.contrib.auth.backends.ModelBackend')
+    return HttpResponse("<div>Authentication success</div><script>function c(){window.close()};c();</script>")
+
+def logout_gmail(request):
+    # remove user data
+    request.user.token = None
+    request.user.gmail = None
     request.user.save()
-    return HttpResponse("Dai dai dai")
+    # get user from db and remove it
+    user = ExampleUser.objects.get(email="email@address.test")
+    user.delete()
+    # remove existing token file
+    if os.path.exists("token.json"):
+        os.remove("token.json")
+    logout(request)
+    return redirect("index")

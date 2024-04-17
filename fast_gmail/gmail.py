@@ -29,9 +29,6 @@ SCOPES = [
 ]
 
 
-
-
-
 class GmailApi(object):
 	"""https://googleapis.github.io/google-api-python-client/docs/dyn/gmail_v1.users.html"""
 	credentials: Optional[Credentials] = None
@@ -44,7 +41,7 @@ class GmailApi(object):
 		self,
 		token_file_path: str = "token.json",
 		credentials_file_path: str = "credentials.json",
-		port: int = 3000, # set the local server port for Authorized redirect URI 
+		port: int = 3000, # set the local server port for Authorized redirect URI
 		separator_symbol: Optional[str] = ", ",
 		user_id: Optional[str] = "me",
 		application_type: ApplicationType = ApplicationType.WEB,
@@ -58,7 +55,7 @@ class GmailApi(object):
 		# created automatically when the authorization flow completes for the first time.
 		if os.path.exists(token_file_path):
 			self.credentials = Credentials.from_authorized_user_file(token_file_path, SCOPES)
-
+		self.auth_url: str = ""
 		# If there are no (valid) credentials available, let the user log in.
 		if not self.credentials or not self.credentials.valid:
 			if self.credentials and self.credentials.expired and self.credentials.refresh_token:
@@ -86,12 +83,13 @@ class GmailApi(object):
 						if not cred_payload:
 							raise Exception(f"Could't read {credentials_file_path=}")
 						if not "web" in cred_payload:
-							raise Exception(f"{cred_payload=} content missing. Did you create credentials for Web app?")
+							raise Exception(f"{cred_payload=} content missing. \n\033[91mDid you create credentials for Web app?\033[0m")
 						if not "redirect_uris" in cred_payload["web"]:
-							raise Exception(f"Missing `redirect_uris` key from {cred_payload['web']}. Did you define redirect URIs?")
+							raise Exception(f"Missing `redirect_uris` key from {cred_payload['web']}. \n\033[91mDid you define Authorized redirect URIs?\033[0m")
+						
 						redirect_uris = cred_payload["web"]["redirect_uris"]
 						for uri in redirect_uris:
-							if port in uri:
+							if str(port) in uri:
 								self.redirect_uri = uri
 						if not self.redirect_uri:
 							self.redirect_uri = redirect_uris[0]
@@ -102,13 +100,13 @@ class GmailApi(object):
 						)
 						if code:
 							self.flow.fetch_token(code=code)
-							self.credentials = self.flow.credentials.to_json()
+							self.credentials: str = self.flow.credentials
 						else:
 							self.auth_url = f"{self.flow.authorization_url()[0]}&prompt=consent"
 							return
 			# Save the credentials for the next run
 			with open(token_file_path, "w") as token:
-				token.write(self.credentials)
+				token.write(self.credentials.to_json())
 		try:
 			# Call the Gmail API and set the instance 
 			self.google_service = GoogleService(
@@ -158,6 +156,7 @@ class GmailApi(object):
 		cc: Optional[List[str] | str]=None,
 		bcc: Optional[List[str] | str]=None,
 		attachments: Optional[List[str] | str]=None,
+		in_reply_to: Optional[str] = None,
 		signature: bool = True
 	)-> Optional[Message]:
 		"""Sends an email message.
@@ -170,6 +169,7 @@ class GmailApi(object):
 				cc (Optional[List[str] | str], optional): List of email addresses to carbon copy. Defaults to None.
 				bcc (Optional[List[str] | str], optional): List of email addresses to blind carbon copy. Defaults to None.
 				attachments (Optional[List[str] | str], optional): List of file paths to attach to the email. Defaults to None.
+				in_reply_to (Optional[str], optional): Message.message_id value that is replyed to. Defaults to None.
 				signature (bool, optional): Whether to include a signature (if configured). Defaults to True.
 			Returns:
 				Optional[Message]: An object representing the sent message, or None on error.
@@ -177,10 +177,13 @@ class GmailApi(object):
 		msg = EmailMessage()
 		msg["To"] = to
 		msg["From"] = str(Header(f"{sender} <{sender}>"))
-		msg["Subject"] = subject
+		msg["Subject"] = subject if not in_reply_to else f"Re: {subject}"
 		msg["Date"] = utils.formatdate(localtime=1)
 		msg["Cc"] = ", ".join(cc) if cc else ""
 		msg["Bcc"] = ", ".join(bcc) if bcc else ""
+		if in_reply_to:
+			msg["In-Reply-To"] = in_reply_to
+			msg["References"] = in_reply_to
 		if signature and html:
 			account_signature = self._alias_info(sender)
 			html = f"{html}<br/><br/>{account_signature['signature'] if 'signature' in account_signature else ''}"

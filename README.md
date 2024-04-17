@@ -29,8 +29,8 @@
 With credentials.json file downloaded we can connect to Gmail
 ```
 gmail = GmailApi(
-    credentials_file_path = __path_to_credentials_json_file__,
-    port = 3000, # default is 3000 IMPORTANT: if you change this default value don't forget to also changed on Authorized redirect URIs
+    credentials_file_path = __path_to_credentials_json_file__,  # Defaults to ./credentials.json
+    port = 3000, # Defaults to 3000  !IMPORTANT: if you change this default value don't forget to also changed on Authorized redirect URIs
 )
 ```
 
@@ -47,6 +47,7 @@ gmail = GmailApi(
         cc: Optional[List[str] | str]=None,
         bcc: Optional[List[str] | str]=None,
         attachments: Optional[List[str] | str]=None,
+		in_reply_to: Optional[str] = None,
         signature: bool = True
     )
     """Sends an email message.
@@ -59,6 +60,7 @@ gmail = GmailApi(
             cc (Optional[List[str] | str], optional): List of email addresses to carbon copy. Defaults to None.
             bcc (Optional[List[str] | str], optional): List of email addresses to blind carbon copy. Defaults to None.
             attachments (Optional[List[str] | str], optional): List of file paths to attach to the email. Defaults to None.
+            in_reply_to (Optional[str], optional): Message.message_id value that is replyed to. Defaults to None.
             signature (bool, optional): Whether to include a signature (if configured). Defaults to True.
         Returns:
             Optional[Message]: An object representing the sent message, or None on error.
