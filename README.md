@@ -19,7 +19,7 @@
 ## Usage:
 
 ### Initialization
-- Go to https://console.developers.google.com/apis/credentials and login to correct account
+- Go to https://console.developers.google.com/apis/credentials and login with correct account
 - Setup Oauth consent screen
 - Create new credentials with OAuth client ID for web or installed app
 - Set Authorized redirect URIs to http://localhost:3000/ (Notice the trailing slash)

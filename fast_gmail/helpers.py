@@ -128,7 +128,7 @@ class LabelAction(Enum):
 
 class ApplicationType(str, Enum):
 	WEB = "web"
-	DESKTOP = "installed"
+	INSTALLED = "installed"
 
 
 class LabelMessageVisibility(str, Enum):
@@ -265,8 +265,8 @@ class GetMessagesResponse(object):
     """
 	next_page_token: Optional[str] = None
 	existing_pages: Optional[str] = None
-	previous_page_token: Optional[List[str | None]] = field(default_factory=lambda: [])
-	messages: List['Message'] = field(default_factory=lambda: [])
+	previous_page_token: Optional[List[str | None]] = field(default_factory = lambda: [])
+	messages: List['Message'] = field(default_factory = lambda: [])
 
 	def __iter__(self):
 		for message in self.messages:
@@ -289,7 +289,7 @@ class GetMessagesResponse(object):
 
 	def __delitem__(self, idx):
 		del self.messages[idx]
-		
+
 	def count(self):
 		return len(self.messages)
 	
