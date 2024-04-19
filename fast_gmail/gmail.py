@@ -1,6 +1,7 @@
 from typing import Optional
 from typing import Union
 from typing import List
+from typing import Any
 import mimetypes
 import base64
 import os
@@ -42,8 +43,8 @@ class GmailApi(object):
 		token_file_path: str = "token.json",
 		credentials_file_path: str = "credentials.json",
 		port: int = 3000, # set the local server port for Authorized redirect URI
-		separator_symbol: Optional[str] = ", ",
-		user_id: Optional[str] = "me",
+		separator_symbol: str = ", ",
+		user_id: str = "me",
 		application_type: ApplicationType = ApplicationType.WEB,
 		code: Optional[str] = None
 	)-> None:
@@ -71,7 +72,7 @@ class GmailApi(object):
 				if not os.path.exists(credentials_file_path):
 					raise FileNotFoundError(f"{credentials_file_path=} NOT FOUND!")
 				match application_type:
-					case ApplicationType.DESKTOP:
+					case ApplicationType.INSTALLED:
 						flow = InstalledAppFlow.from_client_secrets_file(
 							credentials_file_path, SCOPES
 						)
@@ -102,8 +103,8 @@ class GmailApi(object):
 						self.flow = Flow.from_client_secrets_file(
 							credentials_file_path,
 							SCOPES,
-							redirect_uri=self.redirect_uri
-						)
+                            redirect_uri=self.redirect_uri
+                        )
 						if code:
 							self.flow.fetch_token(code=code)
 							self.credentials: str = self.flow.credentials

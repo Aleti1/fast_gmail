@@ -27,13 +27,12 @@ class MessagePartBody(object):
 	attachmentId: Optional[str] = None
 	data: Optional[str] = None
 
-
 @dataclass
 class MessageHeader(object):
 	name: str
 	value: str
 
-
+@dataclass
 class Attachment(object):
 	"""Represents an attachment associated with a Gmail message.
 		Attributes:
@@ -127,7 +126,7 @@ class Attachment(object):
 	def __str__(self):
 		return self.filename
 
-
+@dataclass
 class MessagePart(object):
 	"""Represents a single part of a Gmail message.
 		A message part can be the main body content, an attachment, or a nested structure
@@ -232,7 +231,7 @@ class MessagePart(object):
 				return header
 		return None
 
-
+@dataclass
 class Message(object):
 	"""Represents a single email message within a Gmail account.
 		This class provides access to various message properties and functionalities,
