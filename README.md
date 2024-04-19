@@ -27,15 +27,19 @@
 - Go to Enable APIs & services and enable GmailAPI
 
 With credentials.json file downloaded we can connect to Gmail
-```
+```python
 gmail = GmailApi(
     credentials_file_path = __path_to_credentials_json_file__,  # Defaults to ./credentials.json
     port = 3000, # Defaults to 3000  !IMPORTANT: if you change this default value don't forget to also changed on Authorized redirect URIs
 )
 ```
+### Examples
+- FastAPI
+- Django
+- Flask (comming soon)
 
 ### Send message
-``` 
+```python
     from fast_gmail import GmailApi
 
     messages = GmailApi().send_message(
@@ -68,7 +72,7 @@ gmail = GmailApi(
 ```
 
 ### Get messages
-```
+```python
     messages = GmailApi().get_messages(
         includeSpamTrash: bool = False,
         max_results: int = 10,
@@ -93,7 +97,7 @@ gmail = GmailApi(
 ```
 
 ### Get INBOX/SPAM/TRASH messages
-```
+```python
     messages = GmailApi().get_inbox_messages(
         max_results: int = MAX_RESULTS,
         next_page_token: str = None,
@@ -108,13 +112,13 @@ gmail = GmailApi(
 ```
 
 ### GET message
-```
+```python
     message = GmailApi().get_message(id)
     # returns a Message object
 ```
 
 ### GET attachment
-```
+```python
     message = GmailApi().get_message(id)
     attachment_id = None
     attachment_name = None
@@ -132,7 +136,7 @@ gmail = GmailApi(
 ```
 
 ### Message actions
-```
+```python
     message = GmailApi().get_message(id)
 
     # mark read or unread
