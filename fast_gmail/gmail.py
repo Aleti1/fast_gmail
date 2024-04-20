@@ -26,7 +26,9 @@ from fast_gmail.helpers import *
 # If modifying these scopes, delete the file token.json.
 SCOPES = [
 	"https://www.googleapis.com/auth/gmail.modify",
-	"https://www.googleapis.com/auth/gmail.settings.basic"
+	"https://www.googleapis.com/auth/gmail.settings.basic",
+	"https://www.googleapis.com/auth/contacts.readonly",
+	"https://www.googleapis.com/auth/contacts.other.readonly"
 ]
 
 
@@ -612,3 +614,23 @@ class GmailApi(object):
 				return DraftsList(**request)
 			return DraftsList(resultSizeEstimate=0, drafts=[], nextPageToken=None)
 
+	def get_contacts(self)-> Optional[list]:
+		try:
+			request = build("people", "v1", credentials = self.credentials).otherContacts().list(
+				pageSize=1000,
+				readMask="emailAddresses"
+			).execute()
+			return request["otherContacts"] if "otherContacts" in request else None
+		except HttpError as e:
+			raise e
+		
+	def search_contacts(self, query: str)-> Optional[list]:
+		try:
+			request = build("people", "v1", credentials = self.credentials).otherContacts().search(
+				pageSize=30,
+				readMask="emailAddresses",
+				query = query
+			).execute()
+			return request["results"] if "results" in request else None
+		except HttpError as e:
+			raise e
