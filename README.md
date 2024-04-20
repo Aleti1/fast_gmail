@@ -24,7 +24,7 @@
 - Create new credentials with OAuth client ID for web or installed app
 - Set Authorized redirect URIs to http://localhost:3000/ (Notice the trailing slash)
 - Download the credentials.json file
-- Go to Enable APIs & services and enable GmailAPI
+- Go to Enable APIs & services and enable GmailAPI & PeopleApi(used for contacts)
 
 With credentials.json file downloaded we can connect to Gmail
 ```python
@@ -33,6 +33,7 @@ gmail = GmailApi(
     port = 3000, # Defaults to 3000  !IMPORTANT: if you change this default value don't forget to also changed on Authorized redirect URIs
 )
 ```
+
 ### Examples
 - FastAPI
 - Django
@@ -51,7 +52,7 @@ gmail = GmailApi(
         cc: Optional[List[str] | str]=None,
         bcc: Optional[List[str] | str]=None,
         attachments: Optional[List[str] | str]=None,
-		in_reply_to: Optional[str] = None,
+        in_reply_to: Optional[str] = None,
         signature: bool = True
     )
     """Sends an email message.
@@ -133,6 +134,22 @@ gmail = GmailApi(
 
     # save file to disk
     by_id.save(filepath=f"/tmp/{attachment.filename}", overwrite=True)
+```
+
+### GET contacts
+```python
+    contacts = GmailApi().get_contacts()
+    for contact in contacts:
+        if "emailAddresses" in contact and contact["emailAddresses"]:
+            print(contact["emailAddresses"][0]["value"])
+```
+
+### Search contacts
+```python
+    contacts = GmailApi().search_contacts(query="example@gmail.com")
+    for contact in contacts:
+        if "person" in contact and contact["person"]:
+            print(contact["person"]["emailAddresses"][0]["value"])
 ```
 
 ### Message actions

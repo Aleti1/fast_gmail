@@ -433,17 +433,25 @@ class Message(object):
 
 	@property
 	def sender(self)-> Union[str, None]:
+		"""Returns only the name or email address of the sender"""
+		sender = self.sender_header
+		if not sender:
+			return None
+		if "\"" in sender:
+			sender = sender.split("\"")[1]
+		else:
+			if "<" in sender:
+				sender = sender.split("<")[1].replace(">", "")
+		return sender
+	
+	@property
+	def sender_header(self)-> Union[str, None]:
+		"""Returns the sender message Header"""
 		if not self.message_headers:
 			return None
 		for header in self.message_headers:
 			if header.name == "From":
-				sender = header.value
-				if "\"" in sender:
-					sender = sender.split("\"")[1]
-				else:
-					if "<" in sender:
-						sender = sender.split("<")[1].replace(">", "")
-				return sender
+				return header.value
 		return None
 	
 	@property
