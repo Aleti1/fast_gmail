@@ -1,7 +1,6 @@
 from typing import Optional
 from typing import Union
 from typing import List
-from typing import Any
 import mimetypes
 import base64
 import os
@@ -14,7 +13,8 @@ from email import utils
 from googleapiclient.discovery import build
 from google.oauth2.credentials import Credentials
 from googleapiclient.errors import HttpError
-from google_auth_oauthlib.flow import InstalledAppFlow, Flow
+from google_auth_oauthlib.flow import InstalledAppFlow
+from google_auth_oauthlib.flow import Flow
 
 from fast_gmail.message import MessagePartBody
 from fast_gmail.message import Message
@@ -39,6 +39,7 @@ class GmailApi(object):
 	max_results: int = MAX_RESULTS
 	SEPARATOR_SYMBOL: str
 	profile_data: Optional[GmailProfile] = None
+	redirect_uri: Optional[str] = None
 
 	def __init__(
 		self,
@@ -109,7 +110,7 @@ class GmailApi(object):
                         )
 						if code:
 							self.flow.fetch_token(code=code)
-							self.credentials: str = self.flow.credentials
+							self.credentials = self.flow.credentials
 						else:
 							self.auth_url = f"{self.flow.authorization_url()[0]}&prompt=consent"
 							return
