@@ -1,6 +1,7 @@
 from typing import Optional
 from typing import Union
 from typing import List
+from typing import Any
 import mimetypes
 import base64
 import os
@@ -34,8 +35,9 @@ SCOPES = [
 
 class GmailApi(object):
 	"""https://googleapis.github.io/google-api-python-client/docs/dyn/gmail_v1.users.html"""
+	auth_token: Optional[str] = None
 	credentials: Optional[Credentials] = None
-	google_service: GoogleService
+	google_service: Optional[GoogleService] = None
 	max_results: int = MAX_RESULTS
 	SEPARATOR_SYMBOL: str
 	profile_data: Optional[GmailProfile] = None
@@ -43,22 +45,29 @@ class GmailApi(object):
 
 	def __init__(
 		self,
-		token_file_path: str = "token.json",
 		credentials_file_path: str = "credentials.json",
 		port: int = 3000, # set the local server port for Authorized redirect URI
 		separator_symbol: str = ", ",
 		user_id: str = "me",
 		application_type: ApplicationType = ApplicationType.WEB,
+		auth_token: Optional[str] = None,
 		code: Optional[str] = None
 	)-> None:
 		"""https://github.com/googleapis/google-api-python-client/blob/main/docs/oauth-installed.md"""
 
 		# set separator for spliting/joining the array of existing previous_page_tokens for pagination
 		self.SEPARATOR_SYMBOL = separator_symbol
+
 		# The file token.json stores the user's access and refresh tokens, and is
 		# created automatically when the authorization flow completes for the first time.
-		if os.path.exists(token_file_path):
-			self.credentials = Credentials.from_authorized_user_file(token_file_path, SCOPES)
+		if auth_token:
+			try:
+				self.credentials = Credentials.from_authorized_user_info(
+					json.loads(auth_token),
+					SCOPES
+				)
+			except:
+				raise InvalidToken("INVALID AUTH TOKEN PROVIDED")
 		self.auth_url: str = ""
 		# If there are no (valid) credentials available, let the user log in.
 		if not self.credentials or not self.credentials.valid:
@@ -114,9 +123,8 @@ class GmailApi(object):
 						else:
 							self.auth_url = f"{self.flow.authorization_url()[0]}&prompt=consent"
 							return
-			# Save the credentials for the next run
-			with open(token_file_path, "w") as token:
-				token.write(self.credentials.to_json())
+			# save the credentials as a dict
+			self.auth_token = json.loads(self.credentials.to_json())
 		try:
 			# Call the Gmail API and set the instance 
 			self.google_service = GoogleService(
@@ -125,6 +133,10 @@ class GmailApi(object):
 			)
 		except HttpError as e:
 			raise e
+
+	def get_auth_token(self)-> str:
+		"""Returns a string JSON representation of this instance. It can be passed to from_authorized_user_info() as json.loads to create a new credential instance."""
+		return json.dumps(self.auth_token)
 
 	def get_message(self, id: str)-> Optional[Message]:
 		if not self.google_service:
