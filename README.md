@@ -53,6 +53,7 @@ gmail = GmailApi(
         bcc: Optional[List[str] | str]=None,
         attachments: Optional[List[str] | str]=None,
         in_reply_to: Optional[str] = None,
+        headers: Optional[dict] = None,
         signature: bool = True
     )
     """Sends an email message.
@@ -66,6 +67,7 @@ gmail = GmailApi(
             bcc (Optional[List[str] | str], optional): List of email addresses to blind carbon copy. Defaults to None.
             attachments (Optional[List[str] | str], optional): List of file paths to attach to the email. Defaults to None.
             in_reply_to (Optional[str], optional): Message.message_id value that is replyed to. Defaults to None.
+            headers (Optional[str], optional): Custom headers for message. Ex: {"List-Subscribe": "example.com/unsubscribe"}
             signature (bool, optional): Whether to include a signature (if configured). Defaults to True.
         Returns:
             Optional[Message]: An object representing the sent message, or None on error.
