@@ -3,7 +3,7 @@
 ---
 ## Functionalities:
 - Send text/html messages
-- Send messages with signature & attachments
+- Send messages with signature & attachments & custom headers
 - Get messages with pagination
 - Filter messages
 - Get drafts
