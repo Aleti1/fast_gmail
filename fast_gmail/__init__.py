@@ -1,1 +1,1 @@
-from fast_gmail.gmail import *
+from fast_gmail.gmail import *  # noqa
