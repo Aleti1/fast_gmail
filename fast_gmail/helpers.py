@@ -192,7 +192,7 @@ class DraftIdentifiers(object):
 @dataclass
 class DraftsList(object):
     resultSizeEstimate: int
-    nextPageToken: Optional[str] = None
+    nextPageToken: str | None = None
     drafts: Optional[List[DraftIdentifiers]] = field(default_factory=lambda: [])
 
 
@@ -200,13 +200,13 @@ class DraftsList(object):
 class MessagesList(object):
     resultSizeEstimate: int
     messages: Optional[List[MessageIdentifiers]] = field(default_factory=lambda: [])
-    nextPageToken: Optional[str] = None
+    nextPageToken: str | None = None
 
     def __init__(
         self,
         resultSizeEstimate: int,
         messages: Optional[List[MessageIdentifiers]] = [],
-        nextPageToken: Optional[str] = None,
+        nextPageToken: str | None = None,
     ):
         self.resultSizeEstimate = resultSizeEstimate
         self.nextPageToken = nextPageToken
@@ -266,17 +266,17 @@ class GmailLabel(object):
 class GetMessagesResponse(object):
     """Represents the response object containing retrieved messages and pagination information.
     Attributes:
-        next_page_token (Optional[str], optional): Token for fetching the next page of results. Defaults to None.
-        existing_pages (Optional[str], optional): Used internally for pagination. Defaults to None.
+        next_page_token (str | None, optional): Token for fetching the next page of results. Defaults to None.
+        existing_pages (str | None, optional): Used internally for pagination. Defaults to None.
         previous_page_token (Optional[List[str | None]], optional): Token for fetching the previous page of results (may be empty list). Defaults to [].
         messages (List[Message]): List of retrieved message objects.
 
     This dataclass also provides list-like methods for iterating, checking membership, length, and accessing/modifying elements within the `messages` list.
     """  # noqa
 
-    next_page_token: Optional[str] = None
-    existing_pages: Optional[str] = None
-    previous_page_token: Optional[List[str | None]] = field(default_factory=lambda: [])
+    next_page_token: str | None = None
+    existing_pages: str | None = None
+    previous_page_token: List[str | None] | None = field(default_factory=lambda: [])
     messages: List["Message"] = field(default_factory=lambda: [])  # noqa
 
     def __iter__(self):
@@ -326,10 +326,10 @@ class GetMessagesResponse(object):
 class GoogleService(object):
     service: Resource
     user_id: str
-    message_id: Optional[str]
+    message_id: str | None
 
     def __init__(
-        self, service: Resource, user_id: str, message_id: Optional[str] = None
+        self, service: Resource, user_id: str, message_id: str | None = None
     ):
         self.service = service
         self.user_id = user_id

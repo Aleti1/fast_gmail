@@ -1,10 +1,8 @@
-from typing import Optional
-from typing import Union
-from typing import List
 import mimetypes
+import typing
 import base64
-import os
 import json
+import os
 
 from email.message import EmailMessage
 from email.header import Header
@@ -49,14 +47,14 @@ SCOPES = [
 class GmailApi(object):
     """https://googleapis.github.io/google-api-python-client/docs/dyn/gmail_v1.users.html"""
 
-    auth_token: Optional[str] = None
-    credentials: Optional[Credentials] = None
-    google_service: Optional[GoogleService] = None
+    auth_token: str | None = None
+    credentials: Credentials | None = None
+    google_service: GoogleService | None = None
     max_results: int = MAX_RESULTS
     SEPARATOR_SYMBOL: str
-    profile_data: Optional[GmailProfile] = None
-    redirect_uri: Optional[str] = None
-    auth_url: Optional[str] = None  # this will be used to start the oAuth flow
+    profile_data: GmailProfile | None = None
+    redirect_uri: str | None = None
+    auth_url: str | None = None  # this will be used to start the oAuth flow
 
     def __init__(
         self,
@@ -65,8 +63,8 @@ class GmailApi(object):
         separator_symbol: str = ", ",
         user_id: str = "me",
         application_type: ApplicationType = ApplicationType.WEB,
-        auth_token: Optional[str] = None,
-        code: Optional[str] = None,
+        auth_token: str | None = None,
+        code: str | None = None,
     ) -> None:
         """https://github.com/googleapis/google-api-python-client/blob/main/docs/oauth-installed.md"""
 
@@ -108,7 +106,7 @@ class GmailApi(object):
                         )
                         self.credentials = flow.run_local_server(port=port)
                     case ApplicationType.WEB:
-                        cred_payload: Optional[dict] = None
+                        cred_payload: dict[str, typing.Any] | None = None
                         with open(credentials_file_path, "r") as f:
                             cred_payload = json.loads(f.read())
                         if not cred_payload:
@@ -161,7 +159,7 @@ class GmailApi(object):
         """Returns a string JSON representation of this instance. It can be passed to from_authorized_user_info() as json.loads to create a new credential instance."""  # noqa
         return json.dumps(self.auth_token)
 
-    def get_message(self, id: str) -> Optional[Message]:
+    def get_message(self, id: str) -> Message | None:
         if not self.google_service:
             return None
         return Message(
@@ -176,7 +174,7 @@ class GmailApi(object):
             .execute(),
         )
 
-    def get_draft(self, id: str) -> Optional[Message]:
+    def get_draft(self, id: str) -> Message | None:
         if not self.google_service:
             return None
         return Message(
@@ -196,29 +194,29 @@ class GmailApi(object):
         sender: str,
         to: str,
         subject: str,
-        html: Optional[str] = None,
-        text: Optional[str] = None,
-        cc: Optional[List[str] | str] = None,
-        bcc: Optional[List[str] | str] = None,
-        attachments: Optional[List[str] | str] = None,
-        in_reply_to: Optional[str] = None,
-        headers: Optional[dict] = None,
+        html: str | None = None,
+        text: str | None = None,
+        cc: list[str] | str | None = None,
+        bcc: list[str] | str | None = None,
+        attachments: list[str] | str | None = None,
+        in_reply_to: str | None = None,
+        headers: dict | None = None,
         signature: bool = True,
-    ) -> Optional[Message]:
+    ) -> Message | None:
         """Sends an email message.
         Args:
             sender (str): Email address of the message sender.
             to (str): Email address of the recipient.
             subject (str): Subject line of the email.
-            html (Optional[str], optional): HTML content of the email body. Defaults to None.
-            text (Optional[str], optional): Plain text content of the email body. Defaults to None.
-            cc (Optional[List[str] | str], optional): List of email addresses to carbon copy. Defaults to None.
-            bcc (Optional[List[str] | str], optional): List of email addresses to blind carbon copy. Defaults to None.
-            attachments (Optional[List[str] | str], optional): List of file paths to attach to the email. Defaults to None.
-            in_reply_to (Optional[str], optional): Message.message_id value that is replyed to. Defaults to None.
+            html (str | None, optional): HTML content of the email body. Defaults to None.
+            text (str | None, optional): Plain text content of the email body. Defaults to None.
+            cc (list[str] | str] | None optional): List of email addresses to carbon copy. Defaults to None.
+            bcc (list[str] | str] | None optional): List of email addresses to blind carbon copy. Defaults to None.
+            attachments (list[str] | str] | None optional): List of file paths to attach to the email. Defaults to None.
+            in_reply_to (str | None, optional): Message.message_id value that is replyed to. Defaults to None.
             signature (bool, optional): Whether to include a signature (if configured). Defaults to True.
         Returns:
-            Optional[Message]: An object representing the sent message, or None on error.
+            Message | None: An object representing the sent message, or None on error.
         """  # noqa
         msg = EmailMessage()
         msg["To"] = to
@@ -267,14 +265,14 @@ class GmailApi(object):
     def get_inbox_messages(
         self,
         max_results: int = MAX_RESULTS,
-        next_page_token: str = None,
-        existing_pages: Optional[List[str] | str] = None,
-        previous_page_token: Optional[str] = None,
-        query: Union[SearchParams, str] = None,
+        next_page_token: str | None = None,
+        existing_pages: list[str] | str | None = None,
+        previous_page_token: str | None = None,
+        query: SearchParams | str | None = None,
     ) -> GetMessagesResponse:
         return self._get_messages(
             max_results=max_results,
-            labels=[Labels.INBOX.value],
+            labels=[Labels.INBOX],
             next_page_token=next_page_token,
             existing_pages=existing_pages,
             previous_page_token=previous_page_token,
@@ -284,14 +282,14 @@ class GmailApi(object):
     def get_trash_messages(
         self,
         max_results: int = MAX_RESULTS,
-        next_page_token: str = None,
-        existing_pages: Optional[List[str] | str] = None,
-        previous_page_token: Optional[str] = None,
-        query: Union[SearchParams, str] = None,
+        next_page_token: str | None = None,
+        existing_pages: list[str] | str | None = None,
+        previous_page_token: str | None = None,
+        query: SearchParams | str | None = None,
     ) -> GetMessagesResponse:
         return self._get_messages(
             max_results=max_results,
-            labels=[Labels.TRASH.value],
+            labels=[Labels.TRASH],
             next_page_token=next_page_token,
             existing_pages=existing_pages,
             previous_page_token=previous_page_token,
@@ -301,14 +299,14 @@ class GmailApi(object):
     def get_spam_messages(
         self,
         max_results: int = MAX_RESULTS,
-        next_page_token: str = None,
-        existing_pages: Optional[List[str] | str] = None,
-        previous_page_token: Optional[str] = None,
-        query: Union[SearchParams, str] = None,
+        next_page_token: str | None = None,
+        existing_pages: list[str] | str | None = None,
+        previous_page_token: str | None = None,
+        query: SearchParams | str | None = None,
     ) -> GetMessagesResponse:
         return self._get_messages(
             max_results=max_results,
-            labels=[Labels.SPAM.value],
+            labels=[Labels.SPAM],
             next_page_token=next_page_token,
             existing_pages=existing_pages,
             previous_page_token=previous_page_token,
@@ -319,11 +317,11 @@ class GmailApi(object):
         self,
         includeSpamTrash: bool = False,
         max_results: int = MAX_RESULTS,
-        labels: Union[List[Labels], List[str], None] = None,
-        next_page_token: str = None,
-        existing_pages: Optional[List[str] | str] = None,
-        previous_page_token: Optional[str] = None,
-        query: Union[SearchParams, str] = None,
+        labels: list[Labels] | list[str] | None = None,
+        next_page_token: str | None = None,
+        existing_pages: list[str] | str | None = None,
+        previous_page_token: str | None = None,
+        query: SearchParams | str | None = None,
     ) -> GetMessagesResponse:
         return self._get_messages(
             includeSpamTrash=includeSpamTrash,
@@ -339,11 +337,11 @@ class GmailApi(object):
         self,
         includeSpamTrash: bool = False,
         max_results: int = MAX_RESULTS,
-        next_page_token: str = None,
-        existing_pages: Optional[List[str] | str] = None,
-        previous_page_token: Optional[str] = None,
-        query: Union[SearchParams, str] = None,
-    ) -> Union[List[Draft], list]:
+        next_page_token: str | None = None,
+        existing_pages: list[str] | str | None = None,
+        previous_page_token: str | None = None,
+        query: SearchParams | str | None = None,
+    ) -> GetMessagesResponse:
         return self._get_drafts(
             includeSpamTrash=includeSpamTrash,
             max_results=max_results,
@@ -355,7 +353,7 @@ class GmailApi(object):
 
     def get_attachment(
         self, message_id: str, attachment_id: str
-    ) -> Optional[MessagePartBody]:
+    ) -> MessagePartBody | None:
         try:
             return MessagePartBody(
                 **self.google_service.service.users()
@@ -374,7 +372,7 @@ class GmailApi(object):
             self.google_service.service.close()
 
     @property
-    def labels(self) -> Optional[List[GmailLabel]]:
+    def labels(self) -> list[GmailLabel] | None:
         try:
             results = (
                 self.google_service.service.users()
@@ -389,13 +387,13 @@ class GmailApi(object):
         return [GmailLabel(**label) for label in results.get("labels", [])]
 
     @property
-    def profile(self) -> Optional[GmailProfile]:
+    def profile(self) -> GmailProfile | None:
         """Retrieves and caches the authorized user's Gmail profile information.
         This property is a cached accessor for the user's Gmail profile data.
         The first call will fetch the data from the Gmail API and store it internally.
         Subsequent calls will return the cached data unless it's explicitly cleared.
         Returns:
-            Optional[GmailProfile]: An object containing the user's Gmail profile information,
+            GmailProfile | None: An object containing the user's Gmail profile information,
             or None if there's an error fetching the data.
         Raises:
             HttpError: An exception if there is an error fetching profile information from the Gmail API.
@@ -442,26 +440,26 @@ class GmailApi(object):
         self,
         max_results: int,
         includeSpamTrash: bool = False,
-        labels: Optional[List[Labels]] = None,
-        next_page_token: str = None,
-        existing_pages: Optional[List[str] | str] = None,
-        previous_page_token: Optional[str] = None,
-        query: str = None,
+        labels: list[Labels] | None = None,
+        next_page_token: str | None = None,
+        existing_pages: list[str] | str | None = None,
+        previous_page_token: str | None = None,
+        query: str | None = None,
     ) -> GetMessagesResponse:
         """Retrieves messages from a user's mailbox.
         Args:
             includeSpamTrash (bool, optional): If True, includes messages from spam and trash folders. Defaults to False.
             max_results (int, optional): Maximum number of messages to return. Defaults to MAX_RESULTS (10).
-            labels (Union[List[Labels], List[str], None], optional): List of label IDs or strings to filter by. Defaults to None (all labels).
+            labels (Union[list[Labels], list[str], None], optional): List of label IDs or strings to filter by. Defaults to None (all labels).
             next_page_token (str, optional): Page token for fetching the next page of results.
-            existing_pages (Optional[List[str] | str], optional): Used internally for pagination. Defaults to None.
-            previous_page_token (Optional[str], optional): Page token for fetching the previous page of results.
+            existing_pages (list[str] | str] | None optional): Used internally for pagination. Defaults to None.
+            previous_page_token (str | None, optional): Page token for fetching the previous page of results.
             query (Union[SearchParams, str], optional): Search query to filter messages. Can be a string or a SearchParams object.
         Returns:
             GetMessagesResponse: An object containing the retrieved messages and pagination information.
         """  # noqa
         # set existing page tokens holder
-        existing_pages: Optional[List[str]] = existing_pages or []
+        existing_pages: list[str] | None = existing_pages or []
         if isinstance(existing_pages, str):
             existing_pages = existing_pages.split(self.SEPARATOR_SYMBOL)
         # check if we need get previous messages
@@ -488,7 +486,7 @@ class GmailApi(object):
         )
 
         # set results holder
-        results: List[BatchResponse] = []
+        results: list[BatchResponse] = []
 
         try:
             # create batch request
@@ -529,9 +527,7 @@ class GmailApi(object):
 
         # TODO: group messages by threads???
         return GetMessagesResponse(
-            previous_page_token=existing_pages[-1]
-            if existing_pages
-            else next_page_token,
+            previous_page_token=existing_pages[-1] if existing_pages else next_page_token,
             existing_pages=self.SEPARATOR_SYMBOL.join(existing_pages)
             if existing_pages
             else None,
@@ -543,14 +539,14 @@ class GmailApi(object):
         self,
         max_results: int,
         includeSpamTrash: bool = False,
-        next_page_token: str = None,
-        existing_pages: Optional[List[str] | str] = None,
-        previous_page_token: Optional[str] = None,
-        query: str = None,
+        next_page_token: str | None = None,
+        existing_pages: list[str] | str | None = None,
+        previous_page_token: str | None = None,
+        query: str | None = None,
     ) -> GetMessagesResponse:
         """Retrieves drafts from a user's mailbox."""
         # set existing page tokens holder
-        existing_pages: Optional[List[str]] = existing_pages or []
+        existing_pages: list[str] | None = existing_pages or []
         if isinstance(existing_pages, str):
             existing_pages = existing_pages.split(self.SEPARATOR_SYMBOL)
         # check if we need get previous messages
@@ -574,7 +570,7 @@ class GmailApi(object):
             query=query,
         )
 
-        results: List[Draft] = []
+        results: list[Draft] = []
         try:
 
             def on_get_draft_callback(request_id, response, exception) -> None:
@@ -627,13 +623,13 @@ class GmailApi(object):
 
     def _get_messages_ids(
         self,
-        max_results: Optional[int],
+        max_results: int | None,
         includeSpamTrash: bool = False,
-        labels: Optional[List[Labels]] = None,
-        next_page_token: str = None,
-        query: str = None,
+        labels: list[Labels] | None = None,
+        next_page_token: str | None = None,
+        query: str | None = None,
     ) -> MessagesList:
-        request: Optional[MessagesList] = None
+        request: MessagesList | None = None
         try:
             request = (
                 self.google_service.service.users()
@@ -659,12 +655,12 @@ class GmailApi(object):
 
     def _get_drafts_ids(
         self,
-        max_results: Optional[int],
+        max_results: int | None,
         includeSpamTrash: bool = False,
-        next_page_token: str = None,
-        query: str = None,
+        next_page_token: str | None = None,
+        query: str | None = None,
     ) -> DraftsList:
-        request: Optional[MessagesList] = None
+        request: MessagesList | None = None
         try:
             request = (
                 self.google_service.service.users()
@@ -687,7 +683,7 @@ class GmailApi(object):
                 return DraftsList(**request)
             return DraftsList(resultSizeEstimate=0, drafts=[], nextPageToken=None)
 
-    def get_contacts(self) -> Optional[list]:
+    def get_contacts(self) -> list | None:
         try:
             request = (
                 build("people", "v1", credentials=self.credentials)
@@ -699,7 +695,7 @@ class GmailApi(object):
         except HttpError as e:
             raise e
 
-    def search_contacts(self, query: str) -> Optional[list]:
+    def search_contacts(self, query: str) -> list | None:
         try:
             request = (
                 build("people", "v1", credentials=self.credentials)

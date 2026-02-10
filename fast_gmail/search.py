@@ -1,45 +1,42 @@
 from dataclasses import dataclass
-from typing import Optional
-from typing import List
 
 
 @dataclass
 class SearchParams(object):
     """https://support.google.com/mail/answer/7190"""
-
-    message_id: Optional[str] = None
-    from_sender: Optional[str] = None
-    recipient: Optional[str] = None
-    label: Optional[str] = None
-    subject: Optional[str] = None
-    unread: Optional[bool] = False
-    read: Optional[bool] = False
-    snoozed: Optional[bool] = False
-    starred: Optional[bool] = False
-    search_only_with_attachments: Optional[bool] = False
-    filename: Optional[str] = None
-    ignore_words: Optional[list] = None
-    date_after: Optional[str] = None
-    date_before: Optional[str] = None
-    older_than_date: Optional[str] = None
-    newer_than_date: Optional[str] = None
-    older_than: Optional[str] = None
-    newer_than: Optional[str] = None
-    important: Optional[bool] = False
-    include_spam_trash: Optional[bool] = False
-    google_drive: Optional[bool] = False
-    google_docs: Optional[bool] = False
-    google_sheet: Optional[bool] = False
-    attachment_name: Optional[str] = None
-    has_youtube_video: Optional[bool] = False
-    google_presentation: Optional[bool] = False
-    all_folders: Optional[bool] = False
-    exact_match: Optional[bool] = False
-    search_query: Optional[str] = None
+    message_id: str | None = None
+    from_sender: str | None = None
+    recipient: str | None = None
+    label: str | None = None
+    subject: str | None = None
+    unread: bool | None = False
+    read: bool | None = False
+    snoozed: bool | None = False
+    starred: bool | None = False
+    search_only_with_attachments: bool | None = False
+    filename: str | None = None
+    ignore_words: list | None = None
+    date_after: str | None = None
+    date_before: str | None = None
+    older_than_date: str | None = None
+    newer_than_date: str | None = None
+    older_than: str | None = None
+    newer_than: str | None = None
+    important: bool | None = False
+    include_spam_trash: bool | None = False
+    google_drive: bool | None = False
+    google_docs: bool | None = False
+    google_sheet: bool | None = False
+    attachment_name: str | None = None
+    has_youtube_video: bool | None = False
+    google_presentation: bool | None = False
+    all_folders: bool | None = False
+    exact_match: bool | None = False
+    search_query: str | None = None
 
     @property
     def query(self):
-        search_queries: List[str] = []
+        search_queries: list[str] = []
         if self.message_id:
             search_queries.append(f"rfc822msgid:{self.message_id}")
         if self.from_sender:
