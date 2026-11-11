@@ -4,6 +4,9 @@ from dataclasses import dataclass
 from datetime import datetime as dt
 from datetime import timezone
 
+from email import utils
+from email.message import Message as _EmailHeaders
+
 from fast_gmail.helpers import GoogleService
 from fast_gmail.helpers import Labels
 from fast_gmail.helpers import GmailLabel
@@ -51,7 +54,10 @@ class Attachment(object):
     id: str | None = (
         None  # google will generate new id(hash) each time the message is get with .get() method
     )
-    data: str | None = None
+    data: bytes | None = None
+    size: int | None = None  # size in bytes, as reported by Gmail
+    content_id: str | None = None  # Content-ID, set for images referenced as cid: in the html
+    is_inline: bool = False  # Content-Disposition: inline (usually an image shown in the body)
 
     def __init__(
         self,
@@ -60,7 +66,10 @@ class Attachment(object):
         part_id: str,
         google_service: GoogleService,
         id: str | None = None,
-        data: str | None = None,
+        data: bytes | None = None,
+        size: int | None = None,
+        content_id: str | None = None,
+        is_inline: bool = False,
     ):
         self.filename = filename
         self.mimeType = mimeType
@@ -68,6 +77,9 @@ class Attachment(object):
         self.id = id
         self.data = data
         self.part_id = part_id
+        self.size = size
+        self.content_id = content_id
+        self.is_inline = is_inline
 
     def download(self) -> None:
         """Downloads the attachment data from the Gmail API (if not already downloaded).
@@ -182,12 +194,32 @@ class MessagePart(object):
         """Checks if the message part or its nested parts contain attachments."""
         if self.filename:
             return True
-        if not self.parts:
-            return False
-        for part in self.parts:
-            if part.filename:
-                return True
-        return False
+        return any(part._has_attachments() for part in self.parts or [])
+
+    def _as_attachment(self) -> Attachment:
+        """This part as an Attachment (only meaningful when the part has a filename)."""
+        body = self.body
+        content_id = self._header_value("Content-ID")
+        disposition = self._header_value("Content-Disposition") or ""
+        return Attachment(
+            filename=self.filename.replace("/", "_"),
+            mimeType=self.mimeType if self.mimeType else "",
+            id=body.attachmentId if body else None,
+            # small attachments come inline in the message, base64url encoded
+            data=base64.urlsafe_b64decode(body.data) if body and body.data else None,
+            size=body.size if body else None,
+            content_id=content_id.strip("<>") if content_id else None,
+            is_inline=disposition.strip().casefold().startswith("inline"),
+            google_service=self.google_service,
+            part_id=self.partId,
+        )
+
+    def _header_value(self, name: str) -> str | None:
+        """Value of the first header with this name (case-insensitive)."""
+        for header in self.headers or []:
+            if header.name.casefold() == name.casefold():
+                return header.value
+        return None
 
     def get_attachment_by_filename(self, filename: str) -> Attachment | None:
         """Gets an attachment by its filename."""
@@ -214,31 +246,12 @@ class MessagePart(object):
     @property
     def attachments(self) -> list[Attachment] | None:
         """Property that returns a list of Attachment objects for all attachments within this part and its nested parts"""  # noqa
-        if not self._has_attachments():
-            return []
         attachments = []
-        for part in self.parts:
+        for part in self.parts or []:
             if part.filename:
-                if part.body.attachmentId:
-                    attachments.append(
-                        Attachment(
-                            filename=part.filename.replace("/", "_"),
-                            mimeType=part.mimeType if part.mimeType else "",
-                            id=part.body.attachmentId,
-                            google_service=self.google_service,
-                            part_id=part.partId,
-                        )
-                    )
-                else:
-                    attachments.append(
-                        Attachment(
-                            filename=part.filename.replace("/", "_"),
-                            mimeType=part.mimeType if part.mimeType else "",
-                            data=part.body.data,
-                            google_service=self.google_service,
-                            part_id=part.partId,
-                        )
-                    )
+                attachments.append(part._as_attachment())
+            else:
+                attachments.extend(part.attachments)
         return attachments
 
     def get_header(self, key: str) -> MessageHeader | list[MessageHeader] | None:
@@ -344,12 +357,14 @@ class Message(object):
         self.internalDate = kwargs.pop("internalDate", None)
         self.sizeEstimate = kwargs.pop("sizeEstimate", None)
         self.raw = kwargs.pop("raw", None)
-        self.labelIds = kwargs.pop("labelIds", None)
-        self.google_service = google_service
-        if "payload" in kwargs:
-            self.payload = MessagePart(
-                google_service=self.google_service, **kwargs["payload"]
-            )
+        self.labelIds = kwargs.pop("labelIds", None) or []
+        # each message keeps its own id, so attachments of listed messages can be downloaded
+        self.google_service = _service_for_message(google_service, self.id)
+        self.payload = (
+            MessagePart(google_service=self.google_service, **kwargs["payload"])
+            if kwargs.get("payload")
+            else None
+        )
 
     def __str__(self):
         return self.subject if self.subject else (self.snippet if self.snippet else "")
@@ -367,15 +382,16 @@ class Message(object):
         if part.mimeType not in ["text/plain", "text/html"]:
             for sub_part in part.parts:
                 self._extract_content(sub_part, result)
+        if part.filename:
+            # a text file sent as attachment is not part of the body
+            return
         if part.mimeType not in result:
             result[part.mimeType] = []
         if not part.body:
             return
         if not part.body.data:
             return
-        result[part.mimeType].append(
-            base64.urlsafe_b64decode(part.body.data).decode("utf-8")
-        )
+        result[part.mimeType].append(_decode_body(part))
 
     def _content(self) -> dict | None:
         if not self.payload:
@@ -389,19 +405,13 @@ class Message(object):
                 if self.payload.body.data:
                     if self.payload.mimeType not in result:
                         result[self.payload.mimeType] = []
-                    result[self.payload.mimeType].append(
-                        base64.urlsafe_b64decode(self.payload.body.data).decode("utf-8")
-                    )
+                    result[self.payload.mimeType].append(_decode_body(self.payload))
                     return result
-            return (
-                {
-                    "multipart/alternative": base64.urlsafe_b64decode(
-                        self.payload.body.data
-                    ).decode("utf-8")
-                }
-                if self.payload.body
-                else None
-            )
+            if self.payload.filename or not self.payload.body:
+                return None
+            if not self.payload.body.data:
+                return None
+            return {"multipart/alternative": [_decode_body(self.payload)]}
         for part in self.payload.parts:
             self._extract_content(part, result)
         return result
@@ -437,32 +447,41 @@ class Message(object):
             return ""
         return " ".join(content["multipart/alternative"])
 
+    def header(self, name: str) -> str | None:
+        """Value of the first message header with this name (case-insensitive)."""
+        if not self.payload:
+            return None
+        return self.payload._header_value(name)
+
     @property
     def recipient(self) -> str | None:
-        if not self.message_headers:
-            return None
-        for header in self.message_headers:
-            if header.name == "To":
-                return header.value
-        return None
+        return self.header("To")
+
+    @property
+    def cc(self) -> str | None:
+        return self.header("Cc")
+
+    @property
+    def reply_to(self) -> str | None:
+        """The Reply-To header: where the sender wants the answers (may differ from From)."""
+        return self.header("Reply-To")
 
     @property
     def message_id(self) -> str | None:
-        if not self.message_headers:
-            return None
-        for header in self.message_headers:
-            if header.name.casefold() == "message-id":
-                return header.value
-        return None
+        return self.header("Message-ID")
+
+    @property
+    def in_reply_to(self) -> str | None:
+        return self.header("In-Reply-To")
+
+    @property
+    def references(self) -> str | None:
+        """The References header: Message-IDs of the conversation so far, space separated."""
+        return self.header("References")
 
     @property
     def subject(self) -> str | None:
-        if not self.message_headers:
-            return None
-        for header in self.message_headers:
-            if header.name == "Subject":
-                return header.value
-        return None
+        return self.header("Subject")
 
     @property
     def sender(self) -> str | None:
@@ -480,12 +499,7 @@ class Message(object):
     @property
     def sender_header(self) -> str | None:
         """Returns the sender message Header"""
-        if not self.message_headers:
-            return None
-        for header in self.message_headers:
-            if header.name == "From":
-                return header.value
-        return None
+        return self.header("From")
 
     @property
     def has_attachments(self) -> bool:
@@ -495,55 +509,39 @@ class Message(object):
 
     @property
     def attachments(self) -> list[Attachment] | None:
+        if not self.payload:
+            return []
+        if self.payload.filename:
+            # the whole message is one file (no multipart wrapper)
+            return [self.payload._as_attachment()]
         return self.payload.attachments
+
+    def _has_label(self, label: Labels) -> bool:
+        return label.value in (self.labelIds or [])
 
     @property
     def is_unread(self) -> bool:
-        if not self.labelIds:
-            return False
-        if Labels.UNREAD.value in [x for x in self.labelIds]:
-            return True
-        return False
+        return self._has_label(Labels.UNREAD)
 
     @property
     def is_starred(self) -> bool:
-        if not self.labelIds:
-            return False
-        if Labels.STARRED.value in [x for x in self.labelIds]:
-            return True
-        return False
+        return self._has_label(Labels.STARRED)
 
     @property
     def is_important(self) -> bool:
-        if not self.labelIds:
-            return False
-        if Labels.IMPORTANT.value in [x for x in self.labelIds]:
-            return True
-        return False
+        return self._has_label(Labels.IMPORTANT)
 
     @property
     def is_spam(self) -> bool:
-        if not self.labelIds:
-            return False
-        if Labels.SPAM.value in [x for x in self.labelIds]:
-            return True
-        return False
+        return self._has_label(Labels.SPAM)
 
     @property
     def is_draft(self) -> bool:
-        if not self.labelIds:
-            return False
-        if Labels.DRAFT.value in [x for x in self.labelIds]:
-            return True
-        return False
+        return self._has_label(Labels.DRAFT)
 
     @property
     def is_trash(self) -> bool:
-        if not self.labelIds:
-            return False
-        if Labels.TRASH.value in [x for x in self.labelIds]:
-            return True
-        return False
+        return self._has_label(Labels.TRASH)
 
     @property
     def created_date(self) -> dt:
@@ -558,26 +556,18 @@ class Message(object):
     @property
     def date(self) -> dt | None:
         """returns the date when message was delivered"""
-        received = self.payload.get_header("Received")
-        split_to_extract: bool = True
-        if not received:
-            split_to_extract = False
-            received = self.payload.get_header("Date")
-        if not received:
-            return None
-
-        date_part: str = received.value
-        if split_to_extract:
-            _, date_part = received.value.split("; ")
-            if not date_part:
-                return None
-            if "(" in date_part:
-                date_part, _ = date_part.split("(")
-                if not date_part:
-                    return None
-            date_part = date_part.strip()
-
-        return dt.strptime(date_part, "%a, %d %b %Y %H:%M:%S %z")
+        for name in ("Received", "Date"):
+            value = self.header(name)
+            if not value:
+                continue
+            if name == "Received":
+                # "from ... by ... ; Tue, 10 Nov 2026 09:15:02 -0800 (PST)"
+                value = value.rsplit(";", 1)[-1]
+            try:
+                return utils.parsedate_to_datetime(value.strip())
+            except (TypeError, ValueError):
+                continue
+        return None
 
     def date_string(self, format: str | None = DATE_FORMAT) -> str | None:
         """returns fomated delivered date, cheatsheet: https://strftime.org/"""
@@ -797,3 +787,31 @@ class Message(object):
             raise e
         finally:
             self.google_service.service.close()
+
+
+def _service_for_message(google_service: GoogleService, message_id: str | None):
+    """The same Gmail connection, bound to this message id (needed to download attachments)."""
+    if not isinstance(google_service, GoogleService) or not message_id:
+        return google_service
+    if google_service.message_id == message_id:
+        return google_service
+    return GoogleService(
+        service=google_service.service,
+        user_id=google_service.user_id,
+        message_id=message_id,
+    )
+
+
+def _decode_body(part: MessagePart) -> str:
+    """Text of a body part, decoded with the charset of its Content-Type (not every email is UTF-8)."""
+    raw: bytes = base64.urlsafe_b64decode(part.body.data)
+    charset: str = "utf-8"
+    content_type = part._header_value("Content-Type")
+    if content_type:
+        headers = _EmailHeaders()
+        headers["Content-Type"] = content_type
+        charset = headers.get_content_charset() or charset
+    try:
+        return raw.decode(charset)
+    except (LookupError, UnicodeDecodeError):
+        return raw.decode("utf-8", errors="replace")

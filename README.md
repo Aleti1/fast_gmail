@@ -9,6 +9,10 @@
 - Get drafts
 - Edit message labels
 - Get message attachments
+- Conversations (threads): list, read, mark read/unread
+- Reply / reply all inside a conversation
+- Unread counter
+- Custom OAuth scopes and PKCE
 
 
 ## Instalation:
@@ -34,6 +38,45 @@ gmail = GmailApi(
 )
 ```
 
+Optional arguments:
+```python
+gmail = GmailApi(
+    scopes = ["https://www.googleapis.com/auth/gmail.readonly"],  # Defaults to fast_gmail.SCOPES (gmail.modify + settings + contacts)
+)
+```
+A stored token only works with the scopes it was granted: after changing them, log in again.
+
+#### Web login (two steps)
+```python
+# step 1: no token yet -> send the user to Google
+gmail = GmailApi(credentials_file_path=path)
+redirect(gmail.auth_url)
+
+# step 2: Google calls your redirect URI with ?code=...
+gmail = GmailApi(credentials_file_path=path, code=request.GET["code"])
+save(gmail.get_auth_token())           # keep it, it holds the refresh token
+
+# later: no login needed
+gmail = GmailApi(credentials_file_path=path, auth_token=saved_token)
+```
+
+#### Web login with PKCE
+PKCE (RFC 7636) protects the `code` exchange. It is off by default; with `pkce=True` step 1 also creates
+a `code_verifier` that step 2 must send back, so keep it (in the user session, for example) next to the login.
+```python
+gmail = GmailApi(credentials_file_path=path, pkce=True)
+session["code_verifier"] = gmail.code_verifier
+redirect(gmail.auth_url)
+
+gmail = GmailApi(
+    credentials_file_path=path,
+    pkce=True,
+    code=request.GET["code"],
+    code_verifier=session.pop("code_verifier"),
+)
+```
+The installed-app login (`application_type=ApplicationType.INSTALLED`) uses PKCE by itself.
+
 ### Examples
 - FastAPI
 - Django
@@ -45,33 +88,91 @@ gmail = GmailApi(
 
     messages = GmailApi().send_message(
         sender: str,
-        to: str,
+        to: List[str] | str,
         subject: str,
         html: Optional[str]=None,
         text: Optional[str]=None,
         cc: Optional[List[str] | str]=None,
         bcc: Optional[List[str] | str]=None,
-        attachments: Optional[List[str] | str]=None,
+        attachments: Optional[List[str | AttachmentFile] | str | AttachmentFile]=None,
         in_reply_to: Optional[str] = None,
         headers: Optional[dict] = None,
-        signature: bool = True
+        signature: bool = True,
+        thread_id: Optional[str] = None,
+        references: Optional[List[str] | str] = None,
+        sender_name: Optional[str] = None,
     )
     """Sends an email message.
         Args:
             sender (str): Email address of the message sender.
-            to (str): Email address of the recipient.
+            to (List[str] | str): Email address(es) of the recipient(s).
             subject (str): Subject line of the email.
             html (Optional[str], optional): HTML content of the email body. Defaults to None.
             text (Optional[str], optional): Plain text content of the email body. Defaults to None.
             cc (Optional[List[str] | str], optional): List of email addresses to carbon copy. Defaults to None.
             bcc (Optional[List[str] | str], optional): List of email addresses to blind carbon copy. Defaults to None.
-            attachments (Optional[List[str] | str], optional): List of file paths to attach to the email. Defaults to None.
+            attachments (optional): File paths and/or AttachmentFile(filename, data, mimetype=None) objects (content kept in memory). Defaults to None.
             in_reply_to (Optional[str], optional): Message.message_id value that is replyed to. Defaults to None.
             headers (Optional[str], optional): Custom headers for message. Ex: {"List-Subscribe": "example.com/unsubscribe"}
             signature (bool, optional): Whether to include a signature (if configured). Defaults to True.
+            thread_id (Optional[str], optional): Message.threadId of the conversation the message belongs to.
+            references (Optional[List[str] | str], optional): Message-IDs of the conversation so far. Defaults to in_reply_to.
+            sender_name (Optional[str], optional): Display name shown next to the sender address.
         Returns:
-            Optional[Message]: An object representing the sent message, or None on error.
+            dict: The sent message as Gmail answers it: {"id", "threadId", "labelIds"}.
     """
+```
+
+### Reply to a message
+Answers inside the same conversation: "Re:" subject, `In-Reply-To` + `References` headers and the thread id are set for you.
+```python
+    from fast_gmail import GmailApi, AttachmentFile
+
+    gmail = GmailApi()
+    message = gmail.get_message(id)
+    gmail.reply_to_message(
+        message,
+        sender="office@example.com",
+        html="<p>Thank you!</p>",
+        reply_all=True,                 # also copy everybody from To and Cc (never your own address)
+        cc=["boss@example.com"],        # extra addresses
+        attachments=[AttachmentFile("offer.pdf", pdf_bytes), "/path/to/file.png"],
+        sender_name="Ana from Example",
+    )
+```
+The reply goes to the `Reply-To` of the message, else to its `From`. `fast_gmail.reply_recipients(message, own_address, reply_all)`
+returns the same `(to, cc)` lists without sending anything (handy to pre-fill a reply form).
+
+### Threads (conversations)
+```python
+    gmail = GmailApi()
+
+    # list: newest first, same pagination arguments as get_messages
+    response = gmail.get_inbox_threads(max_results=20, query="is:unread")
+    for thread in response:
+        print(thread.subject, thread.message_count, thread.is_unread, thread.snippet)
+    next_page = gmail.get_inbox_threads(next_page_token=response.next_page_token, existing_pages=response.existing_pages)
+
+    # any label / search
+    gmail.get_threads(labels=[Labels.SENT], query="from:someone@example.com")
+
+    # one conversation with full bodies and attachments, oldest message first
+    thread = gmail.get_thread(thread_id)
+    for message in thread:
+        print(message.sender, message.html)
+
+    thread.mark_as_read()
+    thread.mark_as_unread()
+    thread.modify_labels(labels_to_add=[Labels.STARRED], labels_to_remove=[Labels.INBOX])
+    thread.move_to_trash()
+```
+`get_threads` loads only headers and labels of each message by default (`format="metadata"`, fast); pass `format="full"` to also get the bodies.
+
+### Unread counter
+```python
+    gmail.unread_count()                              # unread conversations in INBOX
+    gmail.unread_count(Labels.SPAM, threads=False)    # unread messages in SPAM
+    gmail.get_label(Labels.INBOX)                     # GmailLabel with all four counters
 ```
 
 ### Get messages
@@ -216,12 +317,15 @@ gmail = GmailApi(
 - **SEPARATOR_SYMBOL (str)**: String used for separating page tokens during pagination.
 - **profile_data (Optional[GmailProfile])**: Caches the user's Gmail profile information.
 - **application_type: ApplicationType = ApplicationType.WEB**: Type of application WEB or INSTALLED,
-- **code: Optional[str] = None**: gmail oAuth response code for creating token.json file after successful login
+- **code: Optional[str] = None**: gmail oAuth response code, exchanged for the token after a successful login
+- **scopes: Optional[List[str]] = None**: OAuth scopes to ask for (defaults to fast_gmail.SCOPES)
+- **pkce: bool = False** / **code_verifier: Optional[str] = None**: PKCE for the web login (see Initialization)
+- **auth_url (str)**: Web login, step 1: the Google page the user has to open
 
 ###### Constructor (__init__):
 - Initializes the GmailApi object.
-- Reads credentials from token and credentials files.
-- Handles refreshing expired tokens.
+- Reads credentials from the `auth_token` argument, else starts the login with the credentials file.
+- An expired token with a refresh token is refreshed automatically on the first request; `get_auth_token()` returns the current one.
 - Creates a GoogleService instance for making API calls.
 
 ###### Methods:
@@ -229,7 +333,11 @@ gmail = GmailApi(
 - **get_message(id: str)-> Optional[Message]**: Retrieves a message by its ID.
 - **get_draft(id: str)-> Optional[Message]**: Retrieves a draft by its ID.
 ###### Message Sending:
-- **send_message(sender, to, subject, ...)-> Optional[Message]**: Sends an email message with various options (text, HTML, attachments, signature).
+- **send_message(sender, to, subject, ...)-> dict**: Sends an email message with various options (text, HTML, attachments, signature).
+- **reply_to_message(message, sender, ...)-> dict**: Answers a message inside its conversation (reply / reply all).
+###### Threads:
+- **get_threads() / get_inbox_threads()-> GetThreadsResponse**: Retrieves conversations with pagination and filtering.
+- **get_thread(id: str)-> Optional[Thread]**: Retrieves one conversation with all its messages.
 ###### Inbox Management:
 - **get_inbox_messages()-> GetMessagesResponse**: Retrieves messages from the inbox.
 Similar methods exist for getting trash, spam, and all messages with various filtering options.
@@ -239,6 +347,8 @@ Similar methods exist for getting trash, spam, and all messages with various fil
 - **get_attachment(message_id: str, attachment_id: str) -> Optional[MessagePartBody]**: Retrieves an attachment from a message.
 ###### Profile and Label Management:
 - **labels**: Returns a list of user labels.
+- **get_label(id)-> GmailLabel**: One label with its total/unread counters.
+- **unread_count(label=Labels.INBOX, threads=True)-> int**: Unread conversations (or messages) under a label.
 - **profile**: Retrieves and caches the user's Gmail profile information.
 
 Overall, this code provides a well-structured and functional interface for interacting with Gmail using the Gmail API.
@@ -305,7 +415,9 @@ Overall, this Message class provides a comprehensive way to access and manage in
 - **part_id (str)**: This attribute stores the internal identifier for the attachment within the message parts. This ID is used to download the attachment using the Gmail API.
 - **google_service (GoogleService)**: This attribute holds a reference to the GoogleService object used for downloading the attachment. This object likely encapsulates authentication and communication details with the Gmail API.
 - **id (Optional[str])**: This optional attribute stores the ID of the attachment generated by Gmail after a message is fetched using the .get() method. This ID might change for the same attachment across different fetches.
-- **data (Optional[str])**: This optional attribute stores the Base64 encoded content of the attachment data downloaded from the API.
+- **data (Optional[bytes])**: This optional attribute stores the content of the attachment (set for small attachments, or after download()).
+- **size (Optional[int])**: Size in bytes, as reported by Gmail.
+- **is_inline (bool)** / **content_id (Optional[str])**: Set for images shown inside the html body (`cid:` references).
 
 ###### Methods:
 - **download() -> None**: This method downloads the attachment data from the Gmail API if it hasn't been downloaded already. It raises exceptions for errors like missing message ID or HTTP errors during download.
@@ -315,9 +427,37 @@ Overall, the Attachment class provides functionality to manage attachments assoc
 
 ---
 
+### class Thread:
+###### Attributes / properties:
+- **id, historyId, snippet**, **messages (List[Message])**: the conversation, oldest message first.
+- **subject, message_count, first_message, last_message, participants, is_unread, has_attachments, attachments**
+###### Methods:
+- **mark_as_read() / mark_as_unread()**, **modify_labels(labels_to_add, labels_to_remove)**, **move_to_trash() / move_from_trash()**: applied to every message of the conversation in one API call.
+
+---
+
 ### class GetMessagesResponse:
 ###### Attributes:
 - **next_page_token (Optional[str], optional)**: Token for fetching the next page of results. Defaults to None.
 - **existing_pages (Optional[str], optional)**: Used internally for pagination. Defaults to None. List like string of page tokens separated by GmailApi.SEPARATOR_SYMBOL
 - **previous_page_token (Optional[List[str | None]], optional)**: Token for fetching the previous page of results (may be empty list). Defaults to [].
 - **messages (List[Message])**: List of retrieved message objects.
+
+---
+
+## Changelog
+
+### 1.5.0
+- Threads: `get_threads`, `get_inbox_threads`, `get_thread`, class `Thread` (mark read/unread, labels, trash).
+- Replies: `reply_to_message` (reply / reply all), `send_message(thread_id=, references=, sender_name=)`.
+- Attachments from memory with `AttachmentFile`; files with an unknown extension no longer crash the send.
+- `unread_count` and `get_label`.
+- Auth: `scopes` argument, PKCE for the web login (`pkce`, `code_verifier`), `get_auth_token()` returns the refreshed token.
+- Message: `cc`, `reply_to`, `references`, `in_reply_to`, `header(name)`; headers are matched case-insensitively;
+  bodies are decoded with their own charset; attachments nested in other parts are found; `Attachment.size/is_inline/content_id`.
+- Google libraries updated: google-api-python-client 2.202+, google-auth-httplib2 0.4.4+, google-auth-oauthlib 1.5+.
+- Behaviour changes to check when upgrading:
+  - listing messages/drafts now raises `HttpError` when Gmail refuses the request (before: an empty list was returned);
+  - `get_draft` returns the draft's message (before: an object without content);
+  - a single address passed as a string to `cc`/`bcc` and a single path passed to `attachments` now work as documented;
+  - `Attachment.data` of small (inline) attachments is `bytes`, like after `download()`.

@@ -336,7 +336,71 @@ class GoogleService(object):
         self.message_id = message_id
 
     def set_message_id(self, id: str):
-        self.messsage_id = id
+        self.message_id = id
 
 
 class InvalidToken(Exception): ...
+
+
+@dataclass
+class AttachmentFile(object):
+    """An in-memory attachment for GmailApi.send_message (no file on disk needed).
+    Attributes:
+        filename (str): Name the recipient sees.
+        data (bytes): Raw file content.
+        mimetype (str | None, optional): "type/subtype"; guessed from the filename when missing.
+    """
+
+    filename: str
+    data: bytes
+    mimetype: str | None = None
+
+
+@dataclass
+class ThreadIdentifiers(object):
+    id: str
+    snippet: str | None = None
+    historyId: str | None = None
+
+
+@dataclass
+class ThreadsList(object):
+    resultSizeEstimate: int = 0
+    threads: List[ThreadIdentifiers] = field(default_factory=lambda: [])
+    nextPageToken: str | None = None
+
+    def __init__(
+        self,
+        resultSizeEstimate: int = 0,
+        threads: Optional[List[dict]] = None,
+        nextPageToken: str | None = None,
+    ):
+        self.resultSizeEstimate = resultSizeEstimate
+        self.nextPageToken = nextPageToken
+        self.threads = [ThreadIdentifiers(**x) for x in threads] if threads else []
+
+
+@dataclass
+class GetThreadsResponse(object):
+    """Response of GmailApi.get_threads: the threads plus the same pagination fields as GetMessagesResponse.
+    Attributes:
+        next_page_token (str | None): Token for fetching the next page of results.
+        existing_pages (str | None): Joined page tokens seen so far; send it back to page backwards.
+        previous_page_token (str | None): Token of the current page; send it back to get the page before it.
+        threads (List[Thread]): Retrieved threads, newest first.
+    """  # noqa
+
+    next_page_token: str | None = None
+    existing_pages: str | None = None
+    previous_page_token: str | None = None
+    threads: List["Thread"] = field(default_factory=lambda: [])  # noqa
+
+    def __iter__(self):
+        for thread in self.threads:
+            yield thread
+
+    def __len__(self):
+        return len(self.threads)
+
+    def __getitem__(self, idx):
+        return self.threads[idx]
