@@ -60,6 +60,14 @@ save(gmail.get_auth_token())           # keep it, it holds the refresh token
 gmail = GmailApi(credentials_file_path=path, auth_token=saved_token)
 ```
 
+#### One credentials file, several redirect URIs
+When the client lists more than one Authorized redirect URI (dev, staging, production), say which one this
+environment uses. Pass the same value in both steps.
+```python
+gmail = GmailApi(credentials_file_path=path, redirect_uri="https://app.example.com/gmail/callback")
+```
+Without it, the URI containing `port` is used, else the first one of the file.
+
 #### Web login with PKCE
 PKCE (RFC 7636) protects the `code` exchange. It is off by default; with `pkce=True` step 1 also creates
 a `code_verifier` that step 2 must send back, so keep it (in the user session, for example) next to the login.
@@ -456,6 +464,10 @@ Overall, the Attachment class provides functionality to manage attachments assoc
 ---
 
 ## Changelog
+
+### 1.7.0
+- `GmailApi(redirect_uri=...)`: choose which Authorized redirect URI of the credentials file the web login uses,
+  for one OAuth client shared by several environments. It must be one of the file's `redirect_uris`.
 
 ### 1.6.0
 - `send_message(in_reply_to=message)`: pass the answered `Message` itself and its thread and References are used.

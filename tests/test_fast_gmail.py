@@ -490,6 +490,16 @@ def test_web_flow_with_pkce(credentials_file):
     assert step2.auth_token == {"token": "x"}
 
 
+def test_redirect_uri_can_be_chosen(credentials_file):
+    api = GmailApi(credentials_file_path=credentials_file, redirect_uri="http://localhost:8003/callback")
+    assert api.redirect_uri == "http://localhost:8003/callback"
+    assert "redirect_uri=http%3A%2F%2Flocalhost%3A8003%2Fcallback" in api.auth_url
+    # default: unchanged (the one using `port`, else the first)
+    assert GmailApi(credentials_file_path=credentials_file).redirect_uri == "http://localhost:3000/callback"
+    with pytest.raises(ValueError):
+        GmailApi(credentials_file_path=credentials_file, redirect_uri="https://evil.example/callback")
+
+
 def test_expired_token_with_refresh_token_does_not_ask_to_log_in(credentials_file):
     token = json.dumps(
         {

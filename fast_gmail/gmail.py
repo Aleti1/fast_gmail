@@ -78,6 +78,7 @@ class GmailApi(object):
         scopes: list[str] | None = None,
         pkce: bool = False,
         code_verifier: str | None = None,
+        redirect_uri: str | None = None,
     ) -> None:
         """https://github.com/googleapis/google-api-python-client/blob/main/docs/oauth-installed.md
 
@@ -93,6 +94,10 @@ class GmailApi(object):
             pkce (bool): WEB flow: protect the code exchange with PKCE (RFC 7636). Step 1 then sets
                 `code_verifier` next to `auth_url`; store it and pass it back in step 2. Defaults to False.
             code_verifier (str | None): WEB flow with PKCE, step 2: the verifier created in step 1.
+            redirect_uri (str | None): WEB flow: which Authorized redirect URI of the credentials file to use,
+                when the file lists several (one client shared by dev / staging / production). It must be one
+                of the file's `redirect_uris`, and the same in step 1 and step 2. Defaults to the one using `port`,
+                else the first of the file.
         """  # noqa
         # set separator for spliting/joining the array of existing previous_page_tokens for pagination
         self.SEPARATOR_SYMBOL = separator_symbol
@@ -116,7 +121,7 @@ class GmailApi(object):
         )
         if not usable:
             self.credentials = self._login(
-                credentials_file_path, application_type, port, code, pkce
+                credentials_file_path, application_type, port, code, pkce, redirect_uri
             )
             if not self.credentials:
                 # WEB flow, step 1: the user has to open auth_url first
@@ -140,6 +145,7 @@ class GmailApi(object):
         port: int,
         code: str | None,
         pkce: bool,
+        redirect_uri: str | None = None,
     ) -> Credentials | None:
         """Runs the OAuth login. Returns None when the WEB flow still waits for the user (auth_url is set)."""
         if not os.path.exists(credentials_file_path):
@@ -152,7 +158,7 @@ class GmailApi(object):
             )
             return flow.run_local_server(port=port)
 
-        self.redirect_uri = self._redirect_uri(credentials_file_path, port)
+        self.redirect_uri = self._redirect_uri(credentials_file_path, port, redirect_uri)
         if code and pkce and not self.code_verifier:
             raise ValueError(
                 "pkce=True needs the `code_verifier` created together with auth_url"
@@ -173,8 +179,9 @@ class GmailApi(object):
         return None
 
     @staticmethod
-    def _redirect_uri(credentials_file_path: str, port: int) -> str:
-        """The Authorized redirect URI that uses `port`, else the first one of the credentials file."""
+    def _redirect_uri(credentials_file_path: str, port: int, wanted: str | None = None) -> str:
+        """The Authorized redirect URI to use: `wanted` when given (it must be in the credentials file),
+        else the one that uses `port`, else the first one of the file."""
         cred_payload: dict[str, typing.Any] | None = None
         with open(credentials_file_path, "r") as f:
             cred_payload = json.loads(f.read())
@@ -191,6 +198,10 @@ class GmailApi(object):
                 f"Missing `redirect_uris` key from {cred_payload['web']}."
                 "\n\033[91mDid you define Authorized redirect URIs?\033[0m"
             )
+        if wanted:
+            if wanted not in redirect_uris:
+                raise ValueError(f"{wanted=} is not one of the credentials file's redirect_uris")
+            return wanted
         matching = [uri for uri in redirect_uris if str(port) in uri]
         return matching[-1] if matching else redirect_uris[0]
 
