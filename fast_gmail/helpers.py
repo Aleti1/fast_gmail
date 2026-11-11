@@ -117,6 +117,10 @@ COLORS = (
 
 # default date format returned by Message.date_string property
 DATE_FORMAT = "%B %d, %Y %H:%M"
+# formats used by Message.short_date_string: today / this year / older
+TIME_FORMAT = "%H:%M"
+DATE_FORMAT_NO_YEAR = "%b %d"
+DATE_FORMAT_YEAR = "%B %d, %Y"
 
 # default number of messages
 MAX_RESULTS = 10

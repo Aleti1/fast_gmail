@@ -143,6 +143,16 @@ Answers inside the same conversation: "Re:" subject, `In-Reply-To` + `References
 The reply goes to the `Reply-To` of the message, else to its `From`. `fast_gmail.reply_recipients(message, own_address, reply_all)`
 returns the same `(to, cc)` lists without sending anything (handy to pre-fill a reply form).
 
+### Inline images and address lists
+```python
+    message = gmail.get_message(id)
+    message.html_with_images()      # html with <img src="cid:..."> replaced by the embedded images (data: URIs)
+    message.inline_images           # {content_id: Attachment}
+    message.recipient_addresses     # ["a@example.com", "b@example.com"]
+    message.cc_addresses
+    message.short_date_string()     # "14:05" today, "Nov 10" this year, "November 10, 2025" older
+```
+
 ### Threads (conversations)
 ```python
     gmail = GmailApi()
@@ -446,6 +456,15 @@ Overall, the Attachment class provides functionality to manage attachments assoc
 ---
 
 ## Changelog
+
+### 1.6.0
+- `send_message(in_reply_to=message)`: pass the answered `Message` itself and its thread and References are used.
+- `Message.html_with_images()`: the html body with its inline (`cid:`) images embedded as `data:` URIs; `Message.inline_images`.
+- `Message.recipient_addresses` / `Message.cc_addresses`: only the email addresses of To / Cc, as lists.
+- `Message.short_date_string()`: hour for today, day and month for this year, full date for older messages.
+- `MessagePart.has_attachments()` (public name of `_has_attachments`).
+- `get_contacts` / `search_contacts` also return the contact names.
+- The Gmail client is built with `cache_discovery=False`: no more "file_cache is only supported with oauth2client<4.0.0" log line.
 
 ### 1.5.0
 - Threads: `get_threads`, `get_inbox_threads`, `get_thread`, class `Thread` (mark read/unread, labels, trash).

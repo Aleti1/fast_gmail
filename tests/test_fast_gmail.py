@@ -370,6 +370,79 @@ def test_reply_recipients_reply_to_and_own_message():
     assert reply_recipients(ours, "office@epolite.ro", reply_all=True) == (["ion@example.com"], ["sef@example.com"])
 
 
+# ------------------------------------------------------------------- 1.6.0
+
+
+def test_send_message_accepts_the_answered_message():
+    api = make_api({"messages.send": {"id": "s1"}})
+    original = Message(api.google_service, **raw_message(headers={"References": "<a@mail>"}))
+    api.send_message(sender="o@e.ro", to="ion@example.com", subject="Oferta RCA", text="ok", in_reply_to=original)
+    body, msg = sent_email(api)
+    assert body["threadId"] == "t1"
+    assert msg["In-Reply-To"] == "<m1@mail>" and msg["References"] == "<a@mail> <m1@mail>"
+    assert msg["Subject"] == "Re: Oferta RCA"
+
+
+def test_address_lists():
+    message = Message(
+        make_api().google_service,
+        **raw_message(headers={"To": "Ana <ana@example.com>, ana@example.com, b@example.com", "CC": '"Pop, Ion" <ion@example.com>'}),
+    )
+    assert message.recipient_addresses == ["ana@example.com", "b@example.com"]
+    assert message.cc_addresses == ["ion@example.com"]
+    assert Message(make_api().google_service, id="m1").cc_addresses == []
+
+
+def test_html_with_images_embeds_cid_images():
+    parts = [
+        {"partId": "0", "mimeType": "text/html", "body": {"size": 9, "data": b64('<img src="cid:logo@cid"><img src="cid:big@cid"><img src="cid:nope">')}},
+        {
+            "partId": "1",
+            "mimeType": "image/png",
+            "filename": "logo.png",
+            "headers": [{"name": "Content-ID", "value": "<logo@cid>"}],
+            "body": {"size": 3, "data": b64(b"PNG")},
+        },
+        {
+            "partId": "2",
+            "mimeType": "image/jpeg",
+            "filename": "big.jpg",
+            "headers": [{"name": "Content-Id", "value": "<big@cid>"}],
+            "body": {"size": 3, "attachmentId": "ATT"},
+        },
+    ]
+    api = make_api({"messages.attachments.get": {"size": 3, "data": b64(b"JPG")}})
+    message = Message(api.google_service, **raw_message(parts=parts))
+    assert set(message.inline_images) == {"logo@cid", "big@cid"}
+    assert message.payload.has_attachments()
+    html = message.html_with_images()
+    assert 'src="data:image/png;base64,UE5H"' in html and 'src="data:image/jpeg;base64,SlBH"' in html
+    assert 'src="cid:nope"' in html
+    # downloaded with the Gmail message id (not the Message-ID header)
+    assert api.log[-1] == ("messages.attachments.get", {"userId": "me", "messageId": "m1", "id": "ATT"})
+
+
+def test_short_date_string():
+    import datetime
+
+    now = datetime.datetime.now().astimezone()
+    old = now.replace(year=now.year - 2, day=1)
+
+    def at(moment):
+        return Message(make_api().google_service, **raw_message(headers={"Date": moment.strftime("%a, %d %b %Y %H:%M:%S %z")}))
+
+    assert at(now).short_date_string() == now.strftime("%H:%M")
+    assert at(old).short_date_string() == old.strftime("%B %d, %Y")
+    assert Message(make_api().google_service, id="m1").short_date_string() is None
+
+
+def test_gmail_client_is_built_without_the_file_cache(credentials_file):
+    token = json.dumps({"token": "t", "refresh_token": "r", "client_id": "id", "client_secret": "s", "token_uri": "https://oauth2.googleapis.com/token"})
+    with mock.patch("fast_gmail.gmail.build") as build:
+        GmailApi(credentials_file_path=credentials_file, auth_token=token)
+    assert build.call_args.kwargs["cache_discovery"] is False
+
+
 # ---------------------------------------------------------------------- auth
 
 CLIENT = {

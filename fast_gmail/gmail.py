@@ -126,7 +126,8 @@ class GmailApi(object):
         self.auth_token = json.loads(self.credentials.to_json())
         # Call the Gmail API and set the instance
         self.google_service = GoogleService(
-            service=build("gmail", "v1", credentials=self.credentials),
+            # no on-disk discovery cache: it needs oauth2client<4 and only logs "file_cache is only supported..."
+            service=build("gmail", "v1", credentials=self.credentials, cache_discovery=False),
             user_id=user_id,
         )
 
@@ -225,7 +226,7 @@ class GmailApi(object):
         cc: Addresses = None,
         bcc: Addresses = None,
         attachments: Attachments = None,
-        in_reply_to: str | None = None,
+        in_reply_to: str | Message | None = None,
         headers: dict | None = None,
         signature: bool = True,
         thread_id: str | None = None,
@@ -242,7 +243,8 @@ class GmailApi(object):
             cc (list[str] | str | None, optional): Email address(es) to carbon copy. Defaults to None.
             bcc (list[str] | str | None, optional): Email address(es) to blind carbon copy. Defaults to None.
             attachments (list | str | AttachmentFile | None, optional): File paths and/or AttachmentFile(filename, data) objects. Defaults to None.
-            in_reply_to (str | None, optional): Message.message_id value that is replyed to. Defaults to None.
+            in_reply_to (str | Message | None, optional): The message that is replyed to: its Message.message_id, or the
+                Message itself (then its thread and References are used too, so the answer stays in the conversation). Defaults to None.
             headers (dict | None, optional): Extra headers, as key: value. Defaults to None.
             signature (bool, optional): Whether to include a signature (if configured). Defaults to True.
             thread_id (str | None, optional): Message.threadId of the conversation the message belongs to. Gmail only
@@ -252,6 +254,12 @@ class GmailApi(object):
         Returns:
             dict: The sent message as Gmail answers it: {"id", "threadId", "labelIds"}.
         """  # noqa
+        if isinstance(in_reply_to, Message):
+            answered: Message = in_reply_to
+            in_reply_to = answered.message_id
+            thread_id = thread_id or answered.threadId
+            if not references and in_reply_to:
+                references = [*(answered.references or "").split(), in_reply_to]
         msg = EmailMessage()
         msg["To"] = _join(to)
         msg["From"] = (
@@ -823,18 +831,18 @@ class GmailApi(object):
 
     def get_contacts(self) -> list | None:
         request = (
-            build("people", "v1", credentials=self.credentials)
+            build("people", "v1", credentials=self.credentials, cache_discovery=False)
             .otherContacts()
-            .list(pageSize=1000, readMask="emailAddresses")
+            .list(pageSize=1000, readMask="emailAddresses,names")
             .execute()
         )
         return request["otherContacts"] if "otherContacts" in request else None
 
     def search_contacts(self, query: str) -> list | None:
         request = (
-            build("people", "v1", credentials=self.credentials)
+            build("people", "v1", credentials=self.credentials, cache_discovery=False)
             .otherContacts()
-            .search(pageSize=30, readMask="emailAddresses", query=query)
+            .search(pageSize=30, readMask="emailAddresses,names", query=query)
             .execute()
         )
         return request["results"] if "results" in request else None

@@ -4,6 +4,8 @@ from dataclasses import dataclass
 from datetime import datetime as dt
 from datetime import timezone
 
+import re
+
 from email import utils
 from email.message import Message as _EmailHeaders
 
@@ -12,6 +14,9 @@ from fast_gmail.helpers import Labels
 from fast_gmail.helpers import GmailLabel
 from fast_gmail.helpers import LabelAction
 from fast_gmail.helpers import DATE_FORMAT
+from fast_gmail.helpers import DATE_FORMAT_NO_YEAR
+from fast_gmail.helpers import DATE_FORMAT_YEAR
+from fast_gmail.helpers import TIME_FORMAT
 
 from googleapiclient.errors import HttpError
 
@@ -195,6 +200,10 @@ class MessagePart(object):
         if self.filename:
             return True
         return any(part._has_attachments() for part in self.parts or [])
+
+    def has_attachments(self) -> bool:
+        """Checks if the message part or its nested parts contain attachments."""
+        return self._has_attachments()
 
     def _as_attachment(self) -> Attachment:
         """This part as an Attachment (only meaningful when the part has a filename)."""
@@ -430,6 +439,36 @@ class Message(object):
         return " ".join(content["text/html"])
 
     @property
+    def inline_images(self) -> dict[str, Attachment]:
+        """Images the html shows in place, by their Content-ID (the html says <img src="cid:CONTENT-ID">)."""
+        return {
+            attachment.content_id: attachment
+            for attachment in self.attachments or []
+            if attachment.content_id and attachment.mimeType.startswith("image/")
+        }
+
+    def html_with_images(self) -> str:
+        """The html body with its inline (cid:) images embedded as data: URIs, so it shows complete
+        on its own. Downloads the images from Gmail (one API call per image that is not already loaded);
+        an image that cannot be found or downloaded keeps its cid: reference."""
+        images = self.inline_images
+
+        def embed(match: re.Match) -> str:
+            image = images.get(match.group(1))
+            if image is None:
+                return match.group(0)
+            try:
+                if image.data is None:
+                    image.download()
+            except HttpError:
+                return match.group(0)
+            if not image.data:
+                return match.group(0)
+            return f"data:{image.mimeType};base64,{base64.b64encode(image.data).decode()}"
+
+        return _CID.sub(embed, self.html)
+
+    @property
     def plain(self) -> str:
         content = self._content()
         if not content:
@@ -460,6 +499,16 @@ class Message(object):
     @property
     def cc(self) -> str | None:
         return self.header("Cc")
+
+    @property
+    def recipient_addresses(self) -> list[str]:
+        """Only the email addresses of the To header (no names), in order, without duplicates."""
+        return _addresses(self.recipient)
+
+    @property
+    def cc_addresses(self) -> list[str]:
+        """Only the email addresses of the Cc header (no names), in order, without duplicates."""
+        return _addresses(self.cc)
 
     @property
     def reply_to(self) -> str | None:
@@ -577,6 +626,17 @@ class Message(object):
         if date.year == dt.now(timezone.utc).astimezone().year:
             format = format.replace(", %Y", "")
         return date.strftime(format)
+
+    def short_date_string(self) -> str | None:
+        """The delivered date as a mail list shows it: the hour for today ("14:05"), day and month
+        for this year ("Nov 10"), the full date for older messages ("November 10, 2025")."""
+        if not self.date:
+            return None
+        date = self.date.astimezone()  # set to locale timezone
+        now = dt.now()
+        if date.date() == now.date():
+            return date.strftime(TIME_FORMAT)
+        return date.strftime(DATE_FORMAT_NO_YEAR if date.year == now.year else DATE_FORMAT_YEAR)
 
     @property
     def mark_as_read(self) -> "Message":
@@ -787,6 +847,19 @@ class Message(object):
             raise e
         finally:
             self.google_service.service.close()
+
+
+# an image the message carries itself, referenced from its html as src="cid:CONTENT-ID"
+_CID = re.compile(r"cid:([^\"'\s>)]+)", re.IGNORECASE)
+
+
+def _addresses(header: str | None) -> list[str]:
+    """The email addresses of an address header, in order, without duplicates."""
+    found: list[str] = []
+    for _, address in utils.getaddresses([header or ""]):
+        if address and address not in found:
+            found.append(address)
+    return found
 
 
 def _service_for_message(google_service: GoogleService, message_id: str | None):
