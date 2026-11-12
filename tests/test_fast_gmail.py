@@ -521,3 +521,13 @@ def test_expired_token_with_refresh_token_does_not_ask_to_log_in(credentials_fil
 def test_invalid_token():
     with pytest.raises(InvalidToken):
         GmailApi(auth_token="not json")
+
+
+def test_create_label():
+    api = make_api({"labels.create": {"id": "Label_5", "name": "ToDo", "type": "user"}})
+    label = api.create_label("ToDo")
+    assert (label.id, label.name) == ("Label_5", "ToDo")
+    assert api.log[0] == (
+        "labels.create",
+        {"userId": "me", "body": {"name": "ToDo", "labelListVisibility": "labelShow", "messageListVisibility": "show"}},
+    )

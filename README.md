@@ -366,6 +366,7 @@ Similar methods exist for getting trash, spam, and all messages with various fil
 ###### Profile and Label Management:
 - **labels**: Returns a list of user labels.
 - **get_label(id)-> GmailLabel**: One label with its total/unread counters.
+- **create_label(name)-> GmailLabel**: Creates a label (a "folder" of the Gmail UI); `/` in the name nests it.
 - **unread_count(label=Labels.INBOX, threads=True)-> int**: Unread conversations (or messages) under a label.
 - **profile**: Retrieves and caches the user's Gmail profile information.
 
@@ -464,6 +465,9 @@ Overall, the Attachment class provides functionality to manage attachments assoc
 ---
 
 ## Changelog
+
+### 1.8.0
+- `GmailApi.create_label(name)`: create a label (a "folder" of the Gmail UI); returns the new `GmailLabel`.
 
 ### 1.7.0
 - `GmailApi(redirect_uri=...)`: choose which Authorized redirect URI of the credentials file the web login uses,

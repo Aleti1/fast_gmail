@@ -591,6 +591,22 @@ class GmailApi(object):
             )
         )
 
+    def create_label(self, name: str) -> GmailLabel:
+        """Create a label (a "folder" of the Gmail UI), shown in the label list and on its messages.
+        A `/` in the name nests it ("Clients/Offers"). Gmail answers 409 for a name that already exists."""
+        return GmailLabel(
+            **self._execute(
+                self._labels().create(
+                    userId=self._user_id,
+                    body={
+                        "name": name,
+                        "labelListVisibility": "labelShow",
+                        "messageListVisibility": "show",
+                    },
+                )
+            )
+        )
+
     def unread_count(
         self, label: Labels | str = Labels.INBOX, threads: bool = True
     ) -> int:
